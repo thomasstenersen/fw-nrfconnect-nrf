@@ -10,13 +10,13 @@
 #include <kernel.h>
 #include <soc.h>
 
-#include <blectlr.h>
-#include <blectlr_hci.h>
-#include <blectlr_util.h>
+#include <ble_controller.h>
+#include <ble_controller_hci.h>
 
 #define BT_DBG_ENABLED IS_ENABLED(CONFIG_BT_DEBUG_HCI_DRIVER)
 #define LOG_MODULE_NAME bt_ctlr_hci_driver
 #include "common/log.h"
+
 
 static K_SEM_DEFINE(sem_recv, 0, UINT_MAX);
 static K_SEM_DEFINE(sem_signal, 0, UINT_MAX);
@@ -25,6 +25,8 @@ static struct k_thread recv_thread_data;
 static struct k_thread signal_thread_data;
 static K_THREAD_STACK_DEFINE(recv_thread_stack, CONFIG_BLECTLR_RX_STACK_SIZE);
 static K_THREAD_STACK_DEFINE(signal_thread_stack, CONFIG_BLECTLR_SIGNAL_STACK_SIZE);
+
+static uint8_t ble_controller_mempool[0x12000];
 
 void blectlr_assertion_handler(const char *const file, const u32_t line)
 {
@@ -38,9 +40,7 @@ void blectlr_assertion_handler(const char *const file, const u32_t line)
 
 static int cmd_handle(struct net_buf *cmd)
 {
-	const bool pkt_put = hci_cmd_packet_put(cmd->data);
-
-	if (!pkt_put) {
+	if (hci_cmd_put(cmd->data)) {
 		return -ENOBUFS;
 	}
 
@@ -51,9 +51,7 @@ static int cmd_handle(struct net_buf *cmd)
 
 static int acl_handle(struct net_buf *acl)
 {
-	const bool pkt_put = hci_data_packet_put(acl->data);
-
-	if (!pkt_put) {
+	if (hci_data_put(acl->data)) {
 		/* Likely buffer overflow event */
 		k_sem_give(&sem_recv);
 		return -ENOBUFS;
@@ -128,14 +126,6 @@ static void event_packet_process(u8_t *hci_buf)
 
 	if (hdr->evt == BT_HCI_EVT_CMD_COMPLETE ||
 	    hdr->evt == BT_HCI_EVT_CMD_STATUS) {
-		u16_t opcode = hci_buf[3] | hci_buf[4] << 8;
-
-		if (opcode == 0xC03) {
-			BT_DBG("Reset command complete");
-			cal_init();
-			blectlr_set_default_evt_length();
-		}
-
 		evt_buf = bt_buf_get_cmd_complete(K_FOREVER);
 	} else {
 		evt_buf = bt_buf_get_rx(BT_BUF_EVT, K_FOREVER);
@@ -151,9 +141,13 @@ static void event_packet_process(u8_t *hci_buf)
 		       "(%02x), length (%d)",
 		       hci_buf[2], hci_buf[1]);
 	} else {
-		BT_DBG("Event: event code (%02x), "
-		       "length (%d)",
-		       hci_buf[0], hci_buf[1]);
+	  uint8_t opcode = hci_buf[2] << 8 | hci_buf[3];
+	  BT_DBG("Event: event code (%02x), "
+		       "length (%d), "
+	         "num_complete (%d), "
+	         "opcode (%d)"
+	         "status (%d)\n",
+		       hci_buf[0], hci_buf[1], hci_buf[2], opcode, hci_buf[5]);
 	}
 
 	net_buf_add_mem(evt_buf, &hci_buf[0], hdr->len + 2);
@@ -171,19 +165,16 @@ static void recv_thread(void *p1, void *p2, void *p3)
 	ARG_UNUSED(p3);
 
 	static u8_t hci_buffer[256 + 4];
-	bool pkt;
 
 	BT_DBG("Started");
 	while (1) {
 		k_sem_take(&sem_recv, K_FOREVER);
 
-		pkt = hci_data_packet_get(hci_buffer);
-		if (pkt) {
+		if (hci_data_get(hci_buffer) == 0) {
 			data_packet_process(hci_buffer);
 		}
 
-		pkt = hci_event_packet_get(hci_buffer);
-		if (pkt) {
+		if (hci_evt_get(hci_buffer) == 0) {
 			event_packet_process(hci_buffer);
 		}
 
@@ -205,7 +196,7 @@ static void signal_thread(void *p1, void *p2, void *p3)
 
 	while (true) {
 		k_sem_take(&sem_signal, K_FOREVER);
-		blectlr_signal();
+		ble_controller_process_SWI5_IRQ();
 	}
 }
 
@@ -244,36 +235,62 @@ void SIGNALLING_Handler(void)
 	k_sem_give(&sem_signal);
 }
 
+static int32_t ble_init(void)
+{
+  int32_t err = 0;
+
+  ble_controller_resource_cfg_t resource_cfg;
+
+  resource_cfg.buffer_cfg.rx_packet_size = 251;
+  resource_cfg.buffer_cfg.tx_packet_size = 251;
+  resource_cfg.conn_event_cfg.event_length_us = 100000;
+  resource_cfg.role_cfg.master_count = 1;
+  resource_cfg.role_cfg.slave_count = 1;
+
+  err = ble_controller_resource_cfg_set(BLE_CONTROLLER_DEFAULT_RESOURCE_CFG_TAG, &resource_cfg);
+  if (err < 0 || err > sizeof(ble_controller_mempool))
+  {
+    return err;
+  }
+
+  nrf_lf_clock_cfg_t clock_cfg;
+  clock_cfg.lf_clk_source = NRF_LF_CLOCK_SRC_RC;
+  clock_cfg.accuracy = NRF_LF_CLOCK_ACCURACY_250_PPM;
+  clock_cfg.rc_ctiv = BLE_CONTROLLER_RECOMMENDED_RC_CTIV;
+  clock_cfg.rc_temp_ctiv = BLE_CONTROLLER_RECOMMENDED_RC_TEMP_CTIV;
+
+  err = ble_controller_enable(host_signal, blectlr_assertion_handler, &clock_cfg, ble_controller_mempool);
+  if (err < 0)
+  {
+    return err;
+  }
+
+  return err;
+}
+
+
 static int hci_driver_init(struct device *unused)
 {
 	ARG_UNUSED(unused);
 
-	u32_t err = blectlr_init(host_signal);
-
-	if (err) {
-		/* Probably memory */
-		return -ENOMEM;
-	}
-
 	bt_hci_driver_register(&drv);
 
-	IRQ_DIRECT_CONNECT(NRF5_IRQ_RADIO_IRQn, 0,
-			   C_RADIO_Handler, IRQ_ZERO_LATENCY);
-	IRQ_DIRECT_CONNECT(NRF5_IRQ_RTC0_IRQn, 0,
-			   C_RTC0_Handler, IRQ_ZERO_LATENCY);
-	IRQ_DIRECT_CONNECT(NRF5_IRQ_TIMER0_IRQn, 0,
-			   C_TIMER0_Handler, IRQ_ZERO_LATENCY);
-	IRQ_CONNECT(NRF5_IRQ_SWI5_IRQn, 4, SIGNALLING_Handler, NULL, 0);
-	IRQ_DIRECT_CONNECT(NRF5_IRQ_RNG_IRQn, 4, C_RNG_Handler, 0);
-	IRQ_DIRECT_CONNECT(NRF5_IRQ_POWER_CLOCK_IRQn, 4,
-			   C_POWER_CLOCK_Handler, 0);
+	int32_t err = ble_init();
+	if (err < 0)
+	{
+	  return err;
+	}
 
-	irq_enable(NRF5_IRQ_RADIO_IRQn);
-	irq_enable(NRF5_IRQ_RTC0_IRQn);
-	irq_enable(NRF5_IRQ_TIMER0_IRQn);
-	irq_enable(NRF5_IRQ_SWI5_IRQn);
-	irq_enable(NRF5_IRQ_RNG_IRQn);
-	irq_enable(NRF5_IRQ_POWER_CLOCK_IRQn);
+	IRQ_DIRECT_CONNECT(NRF5_IRQ_RADIO_IRQn, 0,
+	    ble_controller_RADIO_IRQHandler, IRQ_ZERO_LATENCY);
+	IRQ_DIRECT_CONNECT(NRF5_IRQ_RTC0_IRQn, 0,
+	    ble_controller_RTC0_IRQHandler, IRQ_ZERO_LATENCY);
+	IRQ_DIRECT_CONNECT(NRF5_IRQ_TIMER0_IRQn, 0,
+	    ble_controller_TIMER0_IRQHandler, IRQ_ZERO_LATENCY);
+	IRQ_CONNECT(NRF5_IRQ_SWI5_IRQn, 4, SIGNALLING_Handler, NULL, 0);
+	IRQ_CONNECT(NRF5_IRQ_RNG_IRQn, 4, ble_controller_RNG_IRQHandler, NULL, 0);
+	IRQ_DIRECT_CONNECT(NRF5_IRQ_POWER_CLOCK_IRQn, 0,
+	    ble_controller_POWER_CLOCK_IRQHandler, IRQ_ZERO_LATENCY);
 
 	return 0;
 }
