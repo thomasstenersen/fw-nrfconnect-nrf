@@ -26,7 +26,7 @@ static struct k_thread signal_thread_data;
 static K_THREAD_STACK_DEFINE(recv_thread_stack, CONFIG_BLECTLR_RX_STACK_SIZE);
 static K_THREAD_STACK_DEFINE(signal_thread_stack, CONFIG_BLECTLR_SIGNAL_STACK_SIZE);
 
-static uint8_t ble_controller_mempool[0x12000];
+static uint8_t ble_controller_mempool[0x2000];
 
 void blectlr_assertion_handler(const char *const file, const u32_t line)
 {
@@ -243,7 +243,7 @@ static int32_t ble_init(void)
 
   resource_cfg.buffer_cfg.rx_packet_size = 251;
   resource_cfg.buffer_cfg.tx_packet_size = 251;
-  resource_cfg.conn_event_cfg.event_length_us = 100000;
+  resource_cfg.conn_event_cfg.event_length_us = 7500;
   resource_cfg.role_cfg.master_count = 1;
   resource_cfg.role_cfg.slave_count = 1;
 
