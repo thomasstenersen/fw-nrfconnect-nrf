@@ -12,6 +12,6 @@ add_subdirectory(subsys)
 add_subdirectory(drivers)
 
 # Add the mandatory nrfxlib repository
-set(               NRFXLIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../nrfxlib)
+set(               NRFXLIB_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../nrfxlib CACHE INTERNAL "")
 assert_exists(     NRFXLIB_DIR)
 add_subdirectory(${NRFXLIB_DIR} ${PROJECT_BINARY_DIR}/nrfxlib)
