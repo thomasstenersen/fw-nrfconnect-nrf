@@ -8,6 +8,7 @@ zephyr_library()
 
 zephyr_library_sources(
   hci_driver.c
+  power_clock.c
   )
 
 zephyr_library_sources_ifdef(
