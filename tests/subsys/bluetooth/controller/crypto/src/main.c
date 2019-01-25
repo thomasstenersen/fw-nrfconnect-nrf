@@ -11,7 +11,10 @@
 #include "nrf_errno.h"
 
 #include "crypto.h"
-#include "ble_controller_soc_mock.h"
+#include "ble_controller_soc.h"
+
+
+#define KEYSIZE (16)
 
 void test_bt_rand(void)
 {

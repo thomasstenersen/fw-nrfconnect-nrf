@@ -8,7 +8,7 @@
 #include <stdbool.h>
 #include <inttypes.h>
 #include <ztest.h>
-#include "ble_controller_soc_mock.h"
+#include "ble_controller_soc.h"
 
 int32_t ble_controller_rand_vector_get(uint8_t * p_dst, uint8_t length)
 {
@@ -28,7 +28,7 @@ int32_t ble_controller_ecb_block_encrypt(const uint8_t key[16],
     ztest_check_expected_value(ciphertext);
 
     /* This mock simply copies the cleartext to ciphertext */
-    memcpy(ciphertext, cleartext, KEYSIZE);
+    memcpy(ciphertext, cleartext, 16);
 
     return ztest_get_return_value();
 }
