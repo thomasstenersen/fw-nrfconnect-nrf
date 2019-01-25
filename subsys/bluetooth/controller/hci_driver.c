@@ -26,7 +26,7 @@ static struct k_thread signal_thread_data;
 static K_THREAD_STACK_DEFINE(recv_thread_stack, CONFIG_BLECTLR_RX_STACK_SIZE);
 static K_THREAD_STACK_DEFINE(signal_thread_stack, CONFIG_BLECTLR_SIGNAL_STACK_SIZE);
 
-static uint8_t ble_controller_mempool[0x2000];
+static uint8_t ble_controller_mempool[0x6000];
 
 void blectlr_assertion_handler(const char *const file, const u32_t line)
 {
@@ -53,7 +53,7 @@ static int acl_handle(struct net_buf *acl)
 {
 	if (hci_data_put(acl->data)) {
 		/* Likely buffer overflow event */
-		k_sem_give(&sem_recv);
+  	k_sem_give(&sem_recv);
 		return -ENOBUFS;
 	}
 
@@ -170,11 +170,11 @@ static void recv_thread(void *p1, void *p2, void *p3)
 	while (1) {
 		k_sem_take(&sem_recv, K_FOREVER);
 
-		if (hci_data_get(hci_buffer) == 0) {
+		while (hci_data_get(hci_buffer) == 0) {
 			data_packet_process(hci_buffer);
 		}
 
-		if (hci_evt_get(hci_buffer) == 0) {
+		while (hci_evt_get(hci_buffer) == 0) {
 			event_packet_process(hci_buffer);
 		}
 
@@ -243,7 +243,7 @@ static int32_t ble_init(void)
 
   resource_cfg.buffer_cfg.rx_packet_size = 251;
   resource_cfg.buffer_cfg.tx_packet_size = 251;
-  resource_cfg.conn_event_cfg.event_length_us = 7500;
+  resource_cfg.conn_event_cfg.event_length_us = 50000;
   resource_cfg.role_cfg.master_count = 1;
   resource_cfg.role_cfg.slave_count = 1;
 
@@ -265,7 +265,7 @@ static int32_t ble_init(void)
     return err;
   }
 
-  return err;
+  return 0;
 }
 
 
