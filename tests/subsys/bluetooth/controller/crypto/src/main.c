@@ -7,12 +7,14 @@
 #include <ztest.h>
 #include <stdint.h>
 #include <soc.h>
-#include <misc/printk.h>
+#include <logging/log.h>
 #include "nrf_errno.h"
 
 #include "crypto.h"
 #include "ble_controller_soc.h"
 
+#define LOG_MODULE_NAME tests_crypto
+LOG_MODULE_REGISTER(LOG_MODULE_NAME, LOG_LEVEL_DBG);
 
 #define KEYSIZE (16)
 
@@ -20,7 +22,7 @@ void test_bt_rand(void)
 {
     u8_t    rand_num[5];
 
-    printk("bt_rand() @ 0x%08x\n", (uintptr_t) bt_rand);
+    LOG_INF("bt_rand() @ 0x%08x\n", (uintptr_t) bt_rand);
 
     /* Test invalid params */
     zassert_equal(bt_rand(NULL, sizeof(rand_num)), -NRF_EINVAL, "Failed");
@@ -29,8 +31,7 @@ void test_bt_rand(void)
     /* Test function call */
     ztest_expect_value(ble_controller_rand_vector_get, p_dst, rand_num);
     ztest_expect_value(ble_controller_rand_vector_get, length, sizeof(rand_num));
-    ztest_returns_value(ble_controller_rand_vector_get, 0);
-    zassert_equal(bt_rand(rand_num, sizeof(rand_num)), 0, "Failed");
+    zassert_equal(bt_rand(rand_num, sizeof(rand_num)), 5, "Failed");
 }
 
 void test_bt_encrypt_le(void)
@@ -84,7 +85,7 @@ void test_bt_encrypt_be(void)
 void test_main(void)
 {
     ztest_test_suite(test_crypto,
-	        		 ztest_unit_test(test_bt_rand),
+	                 ztest_unit_test(test_bt_rand),
                      ztest_unit_test(test_bt_encrypt_le),
                      ztest_unit_test(test_bt_encrypt_be));
     ztest_run_test_suite(test_crypto);

@@ -31,7 +31,7 @@ int bt_rand(void *buf, size_t len)
 
   uint32_t errcode = ble_controller_rand_vector_get(buf, (uint8_t) len);
 
-  LOG_DBG("rand bytes %d\n", errcode);
+  LOG_INF("rand bytes %d\n", errcode);
 
   return errcode;
 }
@@ -59,7 +59,7 @@ int bt_encrypt_be(const u8_t key[16], const u8_t plaintext[16], u8_t enc_data[16
   LOG_HEXDUMP_DBG(key, 16, "key");
   LOG_HEXDUMP_DBG(plaintext, 16, "plaintext");
 
-  sys_memcpy_swap(key_le, key, 16);              //?? use zephyr function
+  sys_memcpy_swap(key_le, key, 16);
   sys_memcpy_swap(plaintext_le, plaintext, 16);
   uint32_t errcode = ble_controller_ecb_block_encrypt(key_le, plaintext_le, enc_data_le);
   sys_memcpy_swap(enc_data, enc_data_le, 16);
