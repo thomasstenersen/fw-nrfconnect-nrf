@@ -6,24 +6,17 @@
 
 #include <soc.h>
 #include <errno.h>
-//#include <atomic.h>
 #include <device.h>
 #include <kernel_includes.h>
 #include <clock_control.h>
-//#include <misc/__assert.h>
 #include <ble_controller_soc.h>
 
-static bool m_hfclk_started = false;
-static void hf_clock_started_cb (void)
-{
-	m_hfclk_started = true;
-}
 
 static int hf_clock_start(struct device *dev, clock_control_subsys_t sub_system)
 {
 	ARG_UNUSED(dev);
 
-	if (ble_controller_hf_clock_request(hf_clock_started_cb)) {
+	if (!ble_controller_hf_clock_request(NULL)) {
 		bool blocking = POINTER_TO_UINT(sub_system);
 		if (blocking)
 		{
@@ -45,7 +38,7 @@ static int hf_clock_stop(struct device *dev, clock_control_subsys_t sub_system)
 	ARG_UNUSED(dev);
 	ARG_UNUSED(sub_system);
 
-	if (ble_controller_hf_clock_release()) {
+	if (!ble_controller_hf_clock_release()) {
 		return 0;
 	} else {
 		return -EFAULT;
@@ -94,3 +87,15 @@ DEVICE_AND_API_INIT(lf_clock,
 			clock_control_init, NULL, NULL, PRE_KERNEL_1,
 			CONFIG_KERNEL_INIT_PRIORITY_DEVICE,
 			&lf_clock_control_api);
+
+#ifdef UNIT_TEST
+struct device * lf_clock_device_get(void)
+{
+	return &__device_lf_clock;
+}
+
+struct device * hf_clock_device_get(void)
+{
+	return &__device_hf_clock;
+}
+#endif
