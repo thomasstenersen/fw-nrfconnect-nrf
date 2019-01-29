@@ -20,8 +20,7 @@ static int hf_clock_start(struct device *dev, clock_control_subsys_t sub_system)
 	}
 
 	bool blocking = POINTER_TO_UINT(sub_system);
-	if (blocking)
-	{
+	if (blocking) {
 		bool is_running = false;
 		while (!is_running) {
 			if (ble_controller_hf_clock_is_running(&is_running) != 0) {
@@ -46,7 +45,7 @@ static int hf_clock_stop(struct device *dev, clock_control_subsys_t sub_system)
 }
 
 static int hf_clock_get_rate(struct device *dev, clock_control_subsys_t sub_system,
-							 u32_t *rate)
+			     u32_t *rate)
 {
 	ARG_UNUSED(dev);
 	ARG_UNUSED(sub_system);
@@ -70,7 +69,7 @@ static int lf_clock_start(struct device *dev, clock_control_subsys_t sub_system)
 }
 
 static int lf_clock_get_rate(struct device *dev, clock_control_subsys_t sub_system,
-							 u32_t *rate)
+			     u32_t *rate)
 {
 	ARG_UNUSED(dev);
 	ARG_UNUSED(sub_system);
@@ -99,10 +98,10 @@ static const struct clock_control_driver_api hf_clock_control_api = {
 };
 
 DEVICE_AND_API_INIT(hf_clock,
-			CONFIG_CLOCK_CONTROL_NRF5_M16SRC_DRV_NAME,
-			clock_control_init, NULL, NULL, PRE_KERNEL_1,
-			CONFIG_KERNEL_INIT_PRIORITY_DEVICE,
-			&hf_clock_control_api);
+		    CONFIG_CLOCK_CONTROL_NRF5_M16SRC_DRV_NAME,
+		    clock_control_init, NULL, NULL, PRE_KERNEL_1,
+		    CONFIG_KERNEL_INIT_PRIORITY_DEVICE,
+		    &hf_clock_control_api);
 
 /* LFCLK doesn't have stop function to replicate the nRF5 Power Clock driver
  * behavior. */
@@ -113,18 +112,18 @@ static const struct clock_control_driver_api lf_clock_control_api = {
 };
 
 DEVICE_AND_API_INIT(lf_clock,
-			CONFIG_CLOCK_CONTROL_NRF5_K32SRC_DRV_NAME,
-			clock_control_init, NULL, NULL, PRE_KERNEL_1,
-			CONFIG_KERNEL_INIT_PRIORITY_DEVICE,
-			&lf_clock_control_api);
+		    CONFIG_CLOCK_CONTROL_NRF5_K32SRC_DRV_NAME,
+		    clock_control_init, NULL, NULL, PRE_KERNEL_1,
+		    CONFIG_KERNEL_INIT_PRIORITY_DEVICE,
+		    &lf_clock_control_api);
 
 #ifdef UNIT_TEST
-struct device * lf_clock_device_get(void)
+struct device *lf_clock_device_get(void)
 {
 	return &__device_lf_clock;
 }
 
-struct device * hf_clock_device_get(void)
+struct device *hf_clock_device_get(void)
 {
 	return &__device_hf_clock;
 }

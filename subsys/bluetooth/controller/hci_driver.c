@@ -54,7 +54,7 @@ static int acl_handle(struct net_buf *acl)
 {
 	if (hci_data_put(acl->data)) {
 		/* Likely buffer overflow event */
-  	k_sem_give(&sem_recv);
+		k_sem_give(&sem_recv);
 		return -ENOBUFS;
 	}
 
@@ -81,7 +81,7 @@ static int hci_driver_send(struct net_buf *buf)
 		BT_DBG("ACL_OUT");
 		err = acl_handle(buf);
 		break;
-#endif /* CONFIG_BT_CONN */
+#endif          /* CONFIG_BT_CONN */
 	case BT_BUF_CMD:
 		BT_DBG("CMD");
 		err = cmd_handle(buf);
@@ -143,12 +143,12 @@ static void event_packet_process(u8_t *hci_buf)
 		       "(%02x), length (%d)",
 		       hci_buf[2], hci_buf[1]);
 	} else {
-	  uint8_t opcode = hci_buf[2] << 8 | hci_buf[3];
-	  BT_DBG("Event: event code (%02x), "
+		uint8_t opcode = hci_buf[2] << 8 | hci_buf[3];
+		BT_DBG("Event: event code (%02x), "
 		       "length (%d), "
-	         "num_complete (%d), "
-	         "opcode (%d)"
-	         "status (%d)\n",
+		       "num_complete (%d), "
+		       "opcode (%d)"
+		       "status (%d)\n",
 		       hci_buf[0], hci_buf[1], hci_buf[2], opcode, hci_buf[5]);
 	}
 
@@ -239,71 +239,69 @@ void SIGNALLING_Handler(void)
 
 static int32_t ble_init(void)
 {
-  int32_t err = 0;
+	int32_t err = 0;
 
-  ble_controller_resource_cfg_t resource_cfg;
+	ble_controller_resource_cfg_t resource_cfg;
 
-  resource_cfg.buffer_cfg.rx_packet_size = 251;
-  resource_cfg.buffer_cfg.tx_packet_size = 251;
-  resource_cfg.conn_event_cfg.event_length_us = 50000;
-  resource_cfg.role_cfg.master_count = 1;
-  resource_cfg.role_cfg.slave_count = 1;
+	resource_cfg.buffer_cfg.rx_packet_size = 251;
+	resource_cfg.buffer_cfg.tx_packet_size = 251;
+	resource_cfg.conn_event_cfg.event_length_us = 50000;
+	resource_cfg.role_cfg.master_count = 1;
+	resource_cfg.role_cfg.slave_count = 1;
 
-  err = ble_controller_resource_cfg_set(BLE_CONTROLLER_DEFAULT_RESOURCE_CFG_TAG, &resource_cfg);
-  if (err < 0 || err > sizeof(ble_controller_mempool))
-  {
-    return err;
-  }
+	err = ble_controller_resource_cfg_set(BLE_CONTROLLER_DEFAULT_RESOURCE_CFG_TAG, &resource_cfg);
+	if (err < 0 || err > sizeof(ble_controller_mempool)) {
+		return err;
+	}
 
-  nrf_lf_clock_cfg_t clock_cfg;
+	nrf_lf_clock_cfg_t clock_cfg;
 
 #ifdef CONFIG_CLOCK_CONTROL_NRF5_K32SRC_RC
-  clock_cfg.lf_clk_source = NRF_LF_CLOCK_SRC_RC;
+	clock_cfg.lf_clk_source = NRF_LF_CLOCK_SRC_RC;
 #elif CONFIG_CLOCK_CONTROL_NRF5_K32SRC_XTAL
-  clock_cfg.lf_clk_source = NRF_LF_CLOCK_SRC_XTAL;
+	clock_cfg.lf_clk_source = NRF_LF_CLOCK_SRC_XTAL;
 #elif CLOCK_CONTROL_NRF5_K32SRC_SYNTH
-  clock_cfg.lf_clk_source = NRF_LF_CLOCK_SRC_SYNTH;
+	clock_cfg.lf_clk_source = NRF_LF_CLOCK_SRC_SYNTH;
 #else
 #error "Clock source is not defined"
 #endif
 
 #ifdef CONFIG_CLOCK_CONTROL_NRF5_K32SRC_500PPM
-  clock_cfg.accuracy = NRF_LF_CLOCK_ACCURACY_500_PPM;
+	clock_cfg.accuracy = NRF_LF_CLOCK_ACCURACY_500_PPM;
 #elif CONFIG_CLOCK_CONTROL_NRF5_K32SRC_250PPM
-  clock_cfg.accuracy = NRF_LF_CLOCK_ACCURACY_250_PPM;
+	clock_cfg.accuracy = NRF_LF_CLOCK_ACCURACY_250_PPM;
 #elif CONFIG_CLOCK_CONTROL_NRF5_K32SRC_150PPM
-  clock_cfg.accuracy = NRF_LF_CLOCK_ACCURACY_150_PPM;
+	clock_cfg.accuracy = NRF_LF_CLOCK_ACCURACY_150_PPM;
 #elif CONFIG_CLOCK_CONTROL_NRF5_K32SRC_100PPM
-  clock_cfg.accuracy = NRF_LF_CLOCK_ACCURACY_100_PPM;
+	clock_cfg.accuracy = NRF_LF_CLOCK_ACCURACY_100_PPM;
 #elif CONFIG_CLOCK_CONTROL_NRF5_K32SRC_75PPM
-  clock_cfg.accuracy = NRF_LF_CLOCK_ACCURACY_75_PPM;
+	clock_cfg.accuracy = NRF_LF_CLOCK_ACCURACY_75_PPM;
 #elif CONFIG_CLOCK_CONTROL_NRF5_K32SRC_50PPM
-  clock_cfg.accuracy = NRF_LF_CLOCK_ACCURACY_50_PPM;
+	clock_cfg.accuracy = NRF_LF_CLOCK_ACCURACY_50_PPM;
 #elif CONFIG_CLOCK_CONTROL_NRF5_K32SRC_30PPM
-  clock_cfg.accuracy = NRF_LF_CLOCK_ACCURACY_30_PPM;
+	clock_cfg.accuracy = NRF_LF_CLOCK_ACCURACY_30_PPM;
 #elif CONFIG_CLOCK_CONTROL_NRF5_K32SRC_20PPM
-  clock_cfg.accuracy = NRF_LF_CLOCK_ACCURACY_20_PPM;
+	clock_cfg.accuracy = NRF_LF_CLOCK_ACCURACY_20_PPM;
 #elif CLOCK_CONTROL_NRF5_K32SRC_10PPM
-  clock_cfg.accuracy = NRF_LF_CLOCK_ACCURACY_10_PPM;
+	clock_cfg.accuracy = NRF_LF_CLOCK_ACCURACY_10_PPM;
 #elif CLOCK_CONTROL_NRF5_K32SRC_5PPM
-  clock_cfg.accuracy = NRF_LF_CLOCK_ACCURACY_5_PPM;
+	clock_cfg.accuracy = NRF_LF_CLOCK_ACCURACY_5_PPM;
 #elif CLOCK_CONTROL_NRF5_K32SRC_2PPM
-  clock_cfg.accuracy = NRF_LF_CLOCK_ACCURACY_2_PPM;
+	clock_cfg.accuracy = NRF_LF_CLOCK_ACCURACY_2_PPM;
 #elif CLOCK_CONTROL_NRF5_K32SRC_1PPM
-  clock_cfg.accuracy = NRF_LF_CLOCK_ACCURACY_1_PPM;
+	clock_cfg.accuracy = NRF_LF_CLOCK_ACCURACY_1_PPM;
 #else
 #error "Clock accuracy is not defined"
 #endif
-  clock_cfg.rc_ctiv = BLE_CONTROLLER_RECOMMENDED_RC_CTIV;
-  clock_cfg.rc_temp_ctiv = BLE_CONTROLLER_RECOMMENDED_RC_TEMP_CTIV;
+	clock_cfg.rc_ctiv = BLE_CONTROLLER_RECOMMENDED_RC_CTIV;
+	clock_cfg.rc_temp_ctiv = BLE_CONTROLLER_RECOMMENDED_RC_TEMP_CTIV;
 
-  err = ble_controller_enable(host_signal, blectlr_assertion_handler, &clock_cfg, ble_controller_mempool);
-  if (err < 0)
-  {
-	return err;
-  }
+	err = ble_controller_enable(host_signal, blectlr_assertion_handler, &clock_cfg, ble_controller_mempool);
+	if (err < 0) {
+		return err;
+	}
 
-  return 0;
+	return 0;
 }
 
 
@@ -314,21 +312,20 @@ static int hci_driver_init(struct device *unused)
 	bt_hci_driver_register(&drv);
 
 	int32_t err = ble_init();
-	if (err < 0)
-	{
-	  return err;
+	if (err < 0) {
+		return err;
 	}
 
 	IRQ_DIRECT_CONNECT(NRF5_IRQ_RADIO_IRQn, 0,
-	    ble_controller_RADIO_IRQHandler, IRQ_ZERO_LATENCY);
+			   ble_controller_RADIO_IRQHandler, IRQ_ZERO_LATENCY);
 	IRQ_DIRECT_CONNECT(NRF5_IRQ_RTC0_IRQn, 0,
-	    ble_controller_RTC0_IRQHandler, IRQ_ZERO_LATENCY);
+			   ble_controller_RTC0_IRQHandler, IRQ_ZERO_LATENCY);
 	IRQ_DIRECT_CONNECT(NRF5_IRQ_TIMER0_IRQn, 0,
-	    ble_controller_TIMER0_IRQHandler, IRQ_ZERO_LATENCY);
+			   ble_controller_TIMER0_IRQHandler, IRQ_ZERO_LATENCY);
 	IRQ_CONNECT(NRF5_IRQ_SWI5_IRQn, 4, SIGNALLING_Handler, NULL, 0);
 	IRQ_CONNECT(NRF5_IRQ_RNG_IRQn, 4, ble_controller_RNG_IRQHandler, NULL, 0);
 	IRQ_DIRECT_CONNECT(NRF5_IRQ_POWER_CLOCK_IRQn, 0,
-	    ble_controller_POWER_CLOCK_IRQHandler, IRQ_ZERO_LATENCY);
+			   ble_controller_POWER_CLOCK_IRQHandler, IRQ_ZERO_LATENCY);
 
 	return 0;
 }
