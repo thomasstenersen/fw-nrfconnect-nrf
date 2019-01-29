@@ -11,7 +11,6 @@
 #include <clock_control.h>
 #include <ble_controller_soc.h>
 
-
 static int hf_clock_start(struct device *dev, clock_control_subsys_t sub_system)
 {
 	ARG_UNUSED(dev);

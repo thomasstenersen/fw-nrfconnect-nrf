@@ -49,6 +49,7 @@ static int cmd_handle(struct net_buf *cmd)
 	return 0;
 }
 
+#if defined(CONFIG_BT_CONN)
 static int acl_handle(struct net_buf *acl)
 {
 	if (hci_data_put(acl->data)) {
@@ -59,6 +60,7 @@ static int acl_handle(struct net_buf *acl)
 
 	return 0;
 }
+#endif
 
 static int hci_driver_send(struct net_buf *buf)
 {
@@ -298,7 +300,7 @@ static int32_t ble_init(void)
   err = ble_controller_enable(host_signal, blectlr_assertion_handler, &clock_cfg, ble_controller_mempool);
   if (err < 0)
   {
-    return err;
+	return err;
   }
 
   return err;
