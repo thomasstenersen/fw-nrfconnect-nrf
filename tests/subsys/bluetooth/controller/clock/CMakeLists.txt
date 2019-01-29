@@ -11,7 +11,7 @@ project(NONE)
 MESSAGE("Current dir:" ${CMAKE_CURRENT_SOURCE_DIR})
 set(app_sources
     "${CMAKE_CURRENT_SOURCE_DIR}/src/main.c"
-    "${CMAKE_CURRENT_SOURCE_DIR}/../../../subsys/bluetooth/controller/power_clock.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../../../../../subsys/bluetooth/controller/power_clock_driver.c"
    )
 
 set(OPTIONS

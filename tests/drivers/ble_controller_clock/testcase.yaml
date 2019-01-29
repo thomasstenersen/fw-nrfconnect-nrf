@@ -1,4 +1,0 @@
-tests:
-  ble_controller.clock:
-    platform_whitelist: nrf52840_pca10056 nrf52_pca10040
-    tags: drivers ble_controller power_clock

@@ -1,0 +1,4 @@
+tests:
+  bluetooth.controller.clock:
+    platform_whitelist: nrf52810_pca10040 nrf52840_pca10056 nrf52_pca10040
+    tags: bluetooth controller power_clock
