@@ -28,7 +28,7 @@ int bt_rand(void *buf, size_t len)
 		return -NRF_EINVAL;
 	}
 
-	uint32_t errcode = ble_controller_rand_vector_get(buf, (uint8_t) len);
+	uint32_t errcode = ble_controller_rand_application_vector_get(buf, (uint8_t) len);
 
 	LOG_INF("rand bytes %d\n", errcode);
 
