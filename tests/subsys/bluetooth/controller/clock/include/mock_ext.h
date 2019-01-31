@@ -12,17 +12,17 @@
  *
  * @param fn Mocked function
  */
-#define mock_expect(fn, times) \
-	do { \
+#define mock_expect(fn, times)			       \
+	do {					       \
 		ztest_expect_value(fn, called, times); \
 	} while (0);
 
 /**
  * @brief Check that the mocked function is expected
  */
-#define mock_check_expected() \
-	do { \
-		size_t called = 1; \
+#define mock_check_expected()			    \
+	do {					    \
+		size_t called = 1;		    \
 		ztest_check_expected_value(called); \
 	} while (0);
 
@@ -34,10 +34,10 @@
  * @param fn Mocked function
  * @param value Value to store
  */
-#define mock_arg(fn, value) \
-	do { \
-		ztest_returns_value(fn, value); \
-	} while(0);
+#define mock_arg(fn, value)			\
+	do {					\
+		ztest_returns_value(fn, value);	\
+	} while (0);
 
 /**
  * @brief Obtain stored value in the mocked function
@@ -46,7 +46,7 @@
  *
  * @param value
  */
-#define mock_arg_get(value) \
-	do { \
+#define mock_arg_get(value)			  \
+	do {					  \
 		value = ztest_get_return_value(); \
 	} while (0);

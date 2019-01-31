@@ -52,8 +52,7 @@ static int hf_clock_start(struct device *dev, clock_control_subsys_t sub_system)
 	}
 
 	bool blocking = POINTER_TO_UINT(sub_system);
-	if (blocking)
-	{
+	if (blocking) {
 		bool is_running = false;
 		while (!is_running) {
 			if (ble_controller_hf_clock_is_running_wlock(&is_running) != 0) {

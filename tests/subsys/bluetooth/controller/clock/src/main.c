@@ -17,8 +17,8 @@
 LOG_MODULE_REGISTER(LOG_MODULE_NAME, LOG_LEVEL_DBG);
 
 /** Extern declaration */
-struct device * lf_clock_device_get(void);
-struct device * hf_clock_device_get(void);
+struct device *lf_clock_device_get(void);
+struct device *hf_clock_device_get(void);
 
 /** Mocked functions */
 int32_t ble_controller_hf_clock_request(ble_controller_hf_clock_callback_t on_started)
@@ -34,7 +34,7 @@ int32_t ble_controller_hf_clock_release(void)
 	return (int32_t) ztest_get_return_value();
 }
 
-int32_t ble_controller_hf_clock_is_running(bool * p_is_running)
+int32_t ble_controller_hf_clock_is_running(bool *p_is_running)
 {
 	mock_check_expected();
 	mock_arg_get(*p_is_running);
@@ -142,7 +142,7 @@ void test_hf_clock_get_rate(void)
 	int error;
 	u32_t rate;
 
-	error = clock_control_get_rate(p_clock, (void*)0, &rate);
+	error = clock_control_get_rate(p_clock, (void *)0, &rate);
 	zassert_true(!error, "!error %d", error);
 	zassert_equal(MHZ(16), rate, "HFCLK frequency is wrong: %d", rate);
 }
@@ -162,7 +162,7 @@ void test_lf_clock(void)
 
 	/* Check frequency */
 	u32_t rate;
-	error = clock_control_get_rate(p_clock, (void*)0, &rate);
+	error = clock_control_get_rate(p_clock, (void *)0, &rate);
 	zassert_true(!error, "!error %d", error);
 	zassert_equal(32768, rate, "LFCLK frequency is wrong: %d", rate);
 }
@@ -177,13 +177,13 @@ void test_lf_clock_not_implemented_api(void)
 
 void test_main(void)
 {
-    ztest_test_suite(test_ble_controller_clock,
-					 ztest_unit_test(test_device_get),
-					 ztest_unit_test(test_error_cases),
-					 ztest_unit_test(test_hf_clock_request_non_blocking),
-					 ztest_unit_test(test_hf_clock_request_blocking),
-					 ztest_unit_test(test_hf_clock_get_rate),
-					 ztest_unit_test(test_lf_clock),
-					 ztest_unit_test(test_lf_clock_not_implemented_api));
-    ztest_run_test_suite(test_ble_controller_clock);
+	ztest_test_suite(test_ble_controller_clock,
+			 ztest_unit_test(test_device_get),
+			 ztest_unit_test(test_error_cases),
+			 ztest_unit_test(test_hf_clock_request_non_blocking),
+			 ztest_unit_test(test_hf_clock_request_blocking),
+			 ztest_unit_test(test_hf_clock_get_rate),
+			 ztest_unit_test(test_lf_clock),
+			 ztest_unit_test(test_lf_clock_not_implemented_api));
+	ztest_run_test_suite(test_ble_controller_clock);
 }

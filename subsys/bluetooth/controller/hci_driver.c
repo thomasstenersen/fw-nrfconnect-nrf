@@ -104,7 +104,7 @@ static int hci_driver_send(struct net_buf *buf)
 		BT_DBG("ACL_OUT");
 		err = acl_handle(buf);
 		break;
-#endif /* CONFIG_BT_CONN */
+#endif          /* CONFIG_BT_CONN */
 	case BT_BUF_CMD:
 		BT_DBG("CMD");
 		err = cmd_handle(buf);
