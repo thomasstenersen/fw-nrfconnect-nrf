@@ -7,6 +7,7 @@
 zephyr_library()
 
 zephyr_library_sources(
+  lock.c
   hci_driver.c
   power_clock_driver.c
   )

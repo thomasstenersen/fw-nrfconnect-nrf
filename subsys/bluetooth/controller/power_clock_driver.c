@@ -10,12 +10,44 @@
 #include <kernel_includes.h>
 #include <clock_control.h>
 #include <ble_controller_soc.h>
+#include "lock.h"
+
+static inline int ble_controller_hf_clock_request_wlock(
+	ble_controller_hf_clock_callback_t on_started)
+{
+	s32_t errcode;
+	API_LOCK_AND_RETURN_ON_FAIL(errcode);
+	errcode = ble_controller_hf_clock_request(on_started);
+	API_UNLOCK();
+
+	return errcode;
+}
+
+static inline int ble_controller_hf_clock_is_running_wlock(bool *p_is_running)
+{
+	s32_t errcode;
+	API_LOCK_AND_RETURN_ON_FAIL(errcode);
+	errcode = ble_controller_hf_clock_is_running(p_is_running);
+	API_UNLOCK();
+
+	return errcode;
+}
+
+static inline int ble_controller_hf_clock_release_wlock(void)
+{
+	s32_t errcode;
+	API_LOCK_AND_RETURN_ON_FAIL(errcode);
+	errcode = ble_controller_hf_clock_release();
+	API_UNLOCK();
+
+	return errcode;
+}
 
 static int hf_clock_start(struct device *dev, clock_control_subsys_t sub_system)
 {
 	ARG_UNUSED(dev);
 
-	if (ble_controller_hf_clock_request(NULL) != 0) {
+	if (ble_controller_hf_clock_request_wlock(NULL) != 0) {
 		return -EFAULT;
 	}
 
@@ -24,7 +56,7 @@ static int hf_clock_start(struct device *dev, clock_control_subsys_t sub_system)
 	{
 		bool is_running = false;
 		while (!is_running) {
-			if (ble_controller_hf_clock_is_running(&is_running) != 0) {
+			if (ble_controller_hf_clock_is_running_wlock(&is_running) != 0) {
 				return -EFAULT;
 			}
 		}
@@ -38,7 +70,7 @@ static int hf_clock_stop(struct device *dev, clock_control_subsys_t sub_system)
 	ARG_UNUSED(dev);
 	ARG_UNUSED(sub_system);
 
-	if (ble_controller_hf_clock_release() != 0) {
+	if (ble_controller_hf_clock_release_wlock() != 0) {
 		return -EFAULT;
 	}
 
@@ -100,7 +132,7 @@ static const struct clock_control_driver_api hf_clock_control_api = {
 
 DEVICE_AND_API_INIT(hf_clock,
 			CONFIG_CLOCK_CONTROL_NRF5_M16SRC_DRV_NAME,
-			clock_control_init, NULL, NULL, PRE_KERNEL_1,
+		    clock_control_init, NULL, NULL, PRE_KERNEL_1,
 			CONFIG_KERNEL_INIT_PRIORITY_DEVICE,
 			&hf_clock_control_api);
 
@@ -114,17 +146,17 @@ static const struct clock_control_driver_api lf_clock_control_api = {
 
 DEVICE_AND_API_INIT(lf_clock,
 			CONFIG_CLOCK_CONTROL_NRF5_K32SRC_DRV_NAME,
-			clock_control_init, NULL, NULL, PRE_KERNEL_1,
+		    clock_control_init, NULL, NULL, PRE_KERNEL_1,
 			CONFIG_KERNEL_INIT_PRIORITY_DEVICE,
 			&lf_clock_control_api);
 
 #ifdef UNIT_TEST
-struct device * lf_clock_device_get(void)
+struct device *lf_clock_device_get(void)
 {
 	return &__device_lf_clock;
 }
 
-struct device * hf_clock_device_get(void)
+struct device *hf_clock_device_get(void)
 {
 	return &__device_hf_clock;
 }
