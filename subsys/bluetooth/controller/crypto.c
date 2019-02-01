@@ -27,9 +27,9 @@ int bt_rand(void *buf, size_t len)
 		return -NRF_EINVAL;
 	}
 
-	API_LOCK_AND_RETURN_ON_FAIL(errcode);
+	API_LOCK_AND_RETURN_ON_FAIL;
 	errcode = ble_controller_rand_vector_get(buf, (uint8_t)len);
-	API_UNLOCK();
+	API_UNLOCK;
 
 	LOG_INF("rand bytes %d\n", errcode);
 
@@ -44,9 +44,9 @@ int bt_encrypt_le(const u8_t key[16], const u8_t plaintext[16],
 	LOG_HEXDUMP_DBG(key, 16, "key");
 	LOG_HEXDUMP_DBG(plaintext, 16, "plaintext");
 
-	API_LOCK_AND_RETURN_ON_FAIL(errcode);
+	API_LOCK_AND_RETURN_ON_FAIL;
 	errcode = ble_controller_ecb_block_encrypt(key, plaintext, enc_data);
-	API_UNLOCK();
+	API_UNLOCK;
 
 	LOG_HEXDUMP_DBG(enc_data, 16, "enc_data");
 
@@ -65,10 +65,10 @@ int bt_encrypt_be(const u8_t key[16], const u8_t plaintext[16],
 	sys_memcpy_swap(key_le, key, 16);
 	sys_memcpy_swap(plaintext_le, plaintext, 16);
 
-	API_LOCK_AND_RETURN_ON_FAIL(errcode);
+	API_LOCK_AND_RETURN_ON_FAIL;
 	errcode = ble_controller_ecb_block_encrypt(key_le, plaintext_le,
 						   enc_data_le);
-	API_UNLOCK();
+	API_UNLOCK;
 	sys_memcpy_swap(enc_data, enc_data_le, 16);
 
 	LOG_HEXDUMP_DBG(enc_data, 16, "enc_data");

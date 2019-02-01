@@ -16,9 +16,9 @@ static inline int ble_controller_hf_clock_request_wlock(
 	ble_controller_hf_clock_callback_t on_started)
 {
 	s32_t errcode;
-	API_LOCK_AND_RETURN_ON_FAIL(errcode);
+	API_LOCK_AND_RETURN_ON_FAIL;
 	errcode = ble_controller_hf_clock_request(on_started);
-	API_UNLOCK();
+	API_UNLOCK;
 
 	return errcode;
 }
@@ -26,9 +26,9 @@ static inline int ble_controller_hf_clock_request_wlock(
 static inline int ble_controller_hf_clock_is_running_wlock(bool *p_is_running)
 {
 	s32_t errcode;
-	API_LOCK_AND_RETURN_ON_FAIL(errcode);
+	API_LOCK_AND_RETURN_ON_FAIL;
 	errcode = ble_controller_hf_clock_is_running(p_is_running);
-	API_UNLOCK();
+	API_UNLOCK;
 
 	return errcode;
 }
@@ -36,9 +36,9 @@ static inline int ble_controller_hf_clock_is_running_wlock(bool *p_is_running)
 static inline int ble_controller_hf_clock_release_wlock(void)
 {
 	s32_t errcode;
-	API_LOCK_AND_RETURN_ON_FAIL(errcode);
+	API_LOCK_AND_RETURN_ON_FAIL;
 	errcode = ble_controller_hf_clock_release();
-	API_UNLOCK();
+	API_UNLOCK;
 
 	return errcode;
 }

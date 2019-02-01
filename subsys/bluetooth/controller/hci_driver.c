@@ -43,9 +43,9 @@ static inline int hci_cmd_put_wlock(u8_t *p_data)
 {
 	int errcode;
 
-	API_LOCK_AND_RETURN_ON_FAIL(errcode);
+	API_LOCK_AND_RETURN_ON_FAIL;
 	errcode = hci_cmd_put(p_data);
-	API_UNLOCK();
+	API_UNLOCK;
 
 	return errcode;
 }
@@ -54,9 +54,9 @@ static inline int hci_data_put_wlock(u8_t *p_data)
 {
 	int errcode;
 
-	API_LOCK_AND_RETURN_ON_FAIL(errcode);
+	API_LOCK_AND_RETURN_ON_FAIL;
 	errcode = hci_data_put(p_data);
-	API_UNLOCK();
+	API_UNLOCK;
 
 	return errcode;
 }
@@ -187,9 +187,9 @@ static inline int hci_data_get_wlock(u8_t *hci_buffer)
 {
 	int errcode;
 
-	API_LOCK_AND_RETURN_ON_FAIL(errcode);
+	API_LOCK_AND_RETURN_ON_FAIL;
 	errcode = hci_data_get(hci_buffer);
-	API_UNLOCK();
+	API_UNLOCK;
 
 	return errcode;
 }
@@ -198,9 +198,9 @@ static inline int hci_evt_get_wlock(u8_t *hci_buffer)
 {
 	int errcode;
 
-	API_LOCK_AND_RETURN_ON_FAIL(errcode);
+	API_LOCK_AND_RETURN_ON_FAIL;
 	errcode = hci_evt_get(hci_buffer);
-	API_UNLOCK();
+	API_UNLOCK;
 
 	return errcode;
 }
@@ -294,10 +294,10 @@ static s32_t ble_init(void)
 	resource_cfg.role_cfg.master_count = 1;
 	resource_cfg.role_cfg.slave_count = 1;
 
-	API_LOCK_AND_RETURN_ON_FAIL(err);
+	API_LOCK_AND_RETURN_ON_FAIL;
 	err = ble_controller_resource_cfg_set(
 		BLE_CONTROLLER_DEFAULT_RESOURCE_CFG_TAG, &resource_cfg);
-	API_UNLOCK();
+	API_UNLOCK;
 
 	if (err < 0 || err > sizeof(ble_controller_mempool)) {
 		return err;
@@ -345,10 +345,10 @@ static s32_t ble_init(void)
 	clock_cfg.rc_ctiv = BLE_CONTROLLER_RECOMMENDED_RC_CTIV;
 	clock_cfg.rc_temp_ctiv = BLE_CONTROLLER_RECOMMENDED_RC_TEMP_CTIV;
 
-	API_LOCK_AND_RETURN_ON_FAIL(err);
+	API_LOCK_AND_RETURN_ON_FAIL;
 	err = ble_controller_enable(host_signal, blectlr_assertion_handler,
 				    &clock_cfg, ble_controller_mempool);
-	API_UNLOCK();
+	API_UNLOCK;
 
 	if (err < 0) {
 		return err;

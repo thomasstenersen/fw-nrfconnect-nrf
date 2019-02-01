@@ -20,41 +20,6 @@ config BLECTLR_SIGNAL_STACK_SIZE
 	  Size of the signal handler thread stack, used to process lower
 	  priority signals in the controller.
 
-comment "Multithreading behavior of BLE controller APIs"
-
-menuconfig BLECTLR_SHARED_API_BLOCKING
-	bool "Make API calls blocking if controller is busy."
-	default y
-	help
-		Public API calls such as Crypto and HCI APIs will block
-		if called by multiple threads simultaneously. Only one thread
-		can access the APIs at a time.
-
-if BLECTLR_SHARED_API_BLOCKING
-choice BLECTLR_SHARED_API_BLOCKING_BEHAVIOR
-	prompt "Choose blocking behavior"
-	bool
-	depends on BLECTLR_SHARED_API_BLOCKING
-
-config BLECTLR_SHARED_API_BLOCKING_WITH_TIMEOUT
-	bool "Block with timeout."
-
-config BLECTLR_SHARED_API_BLOCKING_FOREVER
-	bool "Block for forever."
-
-endchoice
-
-config BLECTLR_API_BLOCKING_TIMEOUT_VALUE
-	int "Timeout value (in milliseconds) for the mutex lock."
-	depends on BLECTLR_SHARED_API_BLOCKING_WITH_TIMEOUT
-	default 10
-	help
-		Timeout interval for the BLE controller API which was blocked due to simultaneous access.
-		Timeout value of 0 is same as having non blocking behavior.
-endif # BLECTLR_SHARED_API_BLOCKING
-
-
-
 # The BLE controller library variants are defined in nrfxlib, here we redefine
 # the choice to 'import' them, so they appear in the same menu as the rest.
 
@@ -63,5 +28,41 @@ choice BLE_CONTROLLER_VARIANT
 	bool
 
 endchoice
+
+
+comment "Thread safety behavior of BLE controller APIs"
+
+menuconfig BLECTLR_THREADSAFE_BLOCKING
+	bool "Enable API blocking for thread safety"
+	depends on MULTITHREADING
+	default y
+	help
+		Public API calls such as Crypto and HCI APIs will block
+		if called by multiple threads simultaneously. Only one thread
+		can access the APIs at a time.
+
+if BLECTLR_THREADSAFE_BLOCKING
+choice BLECTLR_THREADSAFE_BLOCKING_BEHAVIOR
+	prompt "Choose blocking behavior"
+	bool
+	depends on BLECTLR_THREADSAFE_BLOCKING
+
+config BLECTLR_THREADSAFE_BLOCKING_FOREVER
+	bool "Block forever."
+
+config BLECTLR_THREADSAFE_BLOCKING_WITH_TIMEOUT
+	bool "Block with timeout."
+
+endchoice
+
+config BLECTLR_API_BLOCKING_TIMEOUT_VALUE
+	int "Timeout value (in milliseconds) for the mutex lock."
+	depends on BLECTLR_THREADSAFE_BLOCKING_WITH_TIMEOUT
+	default 10
+	help
+		Timeout interval for the BLE controller API which was blocked due to
+		simultaneous access. Timeout value of 0 will result in instant return with error
+		if API is already locked by another thread.
+endif # BLECTLR_THREADSAFE_BLOCKING
 
 endmenu
