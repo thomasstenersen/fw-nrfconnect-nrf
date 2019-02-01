@@ -25,12 +25,12 @@ extern "C" {
 #define API_UNLOCK api_unlock
 
 /** Macro representation for typical usage of locking API */
-#define API_LOCK_AND_RETURN_ON_FAIL(err)                           \
-	do {                                                           \
-		err = api_lock();                                          \
-		if (err != 0) {                                            \
+#define API_LOCK_AND_RETURN_ON_FAIL(err)                                       \
+	do {                                                                   \
+		err = api_lock();                                              \
+		if (err != 0) {                                                \
 			return err;                                            \
-		}                                                          \
+		}                                                              \
 	} while (0);
 
 /** @brief Try to take the lock while maintaining the specified blocking behavior.
