@@ -11,13 +11,13 @@ project(NONE)
 MESSAGE("Current dir:" ${CMAKE_CURRENT_SOURCE_DIR})
 set(app_sources
     "${CMAKE_CURRENT_SOURCE_DIR}/src/main.c"
-    "${CMAKE_CURRENT_SOURCE_DIR}/../../../../../subsys/bluetooth/controller/power_clock_driver.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../../../../../subsys/bluetooth/controller/rng_driver.c"
    )
 
 set(OPTIONS
     -DUNIT_TEST
-    -DCONFIG_CLOCK_CONTROL_NRF5_M16SRC_DRV_NAME="clk_m16src"
-    -DCONFIG_CLOCK_CONTROL_NRF5_K32SRC_DRV_NAME="clk_k32src"
+    -DNRF5_IRQ_RNG_IRQn=5
+    -DCONFIG_ENTROPY_NAME="Entropy"
     )
 target_sources(app PRIVATE ${app_sources})
 

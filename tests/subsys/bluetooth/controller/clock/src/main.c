@@ -11,7 +11,7 @@
 #include "nrf_errno.h"
 #include "ble_controller_soc.h"
 #include <clock_control.h>
-#include <include/mock_ext.h>
+#include <mock_ext.h>
 
 #define LOG_MODULE_NAME test_ble_controller_clock
 LOG_MODULE_REGISTER(LOG_MODULE_NAME, LOG_LEVEL_DBG);

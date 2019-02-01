@@ -12,8 +12,9 @@
 #include <kernel_includes.h>
 #include <ble_controller.h>
 #include <ble_controller_soc.h>
-#include <nrfx.h>
-#include <nrf_soc.h>
+
+#define DEV_DATA(dev) \
+	((struct rng_driver_data *)(dev)->driver_data)
 
 /* The RNG driver data. */
 struct rng_driver_data {
@@ -23,9 +24,9 @@ struct rng_driver_data {
 
 static struct rng_driver_data rng_data;
 
-static int rng_driver_get_entropy(struct device *device, u8_t *buf, u16_t len)
+static int rng_driver_get_entropy(struct device *dev, u8_t *buf, u16_t len)
 {
-	__ASSERT_NO_MSG(&entropy_nrf5_data == DEV_DATA(device));
+	__ASSERT_NO_MSG(&rng_data == DEV_DATA(dev));
 
 	uint8_t pool_capacity;
 	if (ble_controller_rand_pool_capacity_get(&pool_capacity) != 0) {
@@ -54,7 +55,7 @@ static int rng_driver_get_entropy(struct device *device, u8_t *buf, u16_t len)
 static int rng_driver_get_entropy_isr(struct device *dev, u8_t *buf, u16_t len,
 									  u32_t flags)
 {
-	__ASSERT_NO_MSG(&entropy_nrf5_data == DEV_DATA(device));
+	__ASSERT_NO_MSG(&rng_data == DEV_DATA(dev));
 
 	u16_t bread;
 	uint8_t pool_capacity;
@@ -86,7 +87,7 @@ static int rng_driver_get_entropy_isr(struct device *dev, u8_t *buf, u16_t len,
 	return len;
 }
 
-static void rng_driver_isr(void)
+static void rng_driver_isr(void *param)
 {
 	ble_controller_RNG_IRQHandler();
 
