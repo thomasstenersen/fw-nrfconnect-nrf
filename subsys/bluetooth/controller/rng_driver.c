@@ -69,7 +69,7 @@ static int rng_driver_get_entropy_isr(struct device *dev, u8_t *buf, u16_t len,
 		__ASSERT_NO_MSG(bread <= (uint8_t)(-1));
 
 		int32_t errcode = ble_controller_rand_prio_low_vector_get(buf, (uint8_t) bread);
-		return errcode == 0 ? bread : errcode;
+		return errcode == 0 ? bread : -EINVAL;
 	}
 
 	u16_t bleft = len;
@@ -89,6 +89,8 @@ static int rng_driver_get_entropy_isr(struct device *dev, u8_t *buf, u16_t len,
 
 static void rng_driver_isr(void *param)
 {
+	ARG_UNUSED(param);
+
 	ble_controller_RNG_IRQHandler();
 
 	/* This sema wakes up the pending client buffer to fill it with new random
@@ -112,7 +114,21 @@ static const struct entropy_driver_api rng_driver_api_funcs = {
 	.get_entropy_isr = rng_driver_get_entropy_isr
 };
 
-DEVICE_AND_API_INIT(entropy_nrf5, CONFIG_ENTROPY_NAME,
+DEVICE_AND_API_INIT(rng_driver, CONFIG_ENTROPY_NAME,
 			rng_driver_init, &rng_data, NULL,
 			PRE_KERNEL_1, CONFIG_KERNEL_INIT_PRIORITY_DEVICE,
 			&rng_driver_api_funcs);
+
+#ifdef UNIT_TEST
+
+struct device *rng_driver_get(void)
+{
+	return &__device_rng_driver;
+}
+
+struct k_sem * rng_driver_sema_sync_get(void)
+{
+	return &rng_data.sem_sync;
+}
+
+#endif

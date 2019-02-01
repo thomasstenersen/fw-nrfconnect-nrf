@@ -4,6 +4,9 @@
  * SPDX-License-Identifier: LicenseRef-BSD-5-Clause-Nordic
  */
 
+#ifndef __MOCK_EXT_H
+#define __MOCK_EXT_H
+
 #include <ztest.h>
 #include <stdint.h>
 
@@ -50,3 +53,5 @@
 	do {					  \
 		value = ztest_get_return_value(); \
 	} while (0);
+
+#endif /* __MOCK_EXT_H */
