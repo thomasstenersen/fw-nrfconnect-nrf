@@ -366,9 +366,7 @@ static int hci_driver_init(struct device *unused)
 
 	s32_t err = 0;
 
-	API_LOCK_AND_RETURN_ON_FAIL(err);
 	err = ble_init();
-	API_UNLOCK();
 
 	if (err < 0) {
 		return err;
