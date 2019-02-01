@@ -11,11 +11,10 @@
 #include <soc.h>
 #include <logging/log.h>
 
-#include <blectlr_util.h>
 #include <ble_controller_soc.h>
 
 #include "nrf_error.h"
-#include "lock.h"
+#include "multithreading_lock.h"
 
 #define LOG_MODULE_NAME ble_controller_crypto
 LOG_MODULE_REGISTER(LOG_MODULE_NAME, LOG_LEVEL_DBG);

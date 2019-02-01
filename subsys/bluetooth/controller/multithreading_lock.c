@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: LicenseRef-BSD-5-Clause-Nordic
  */
 
-#include "lock.h"
+#include "multithreading_lock.h"
 
 #include <soc.h>
 #include <gpio.h>

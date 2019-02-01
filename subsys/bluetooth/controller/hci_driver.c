@@ -12,7 +12,7 @@
 
 #include <ble_controller.h>
 #include <ble_controller_hci.h>
-#include "lock.h"
+#include "multithreading_lock.h"
 
 #define BT_DBG_ENABLED IS_ENABLED(CONFIG_BT_DEBUG_HCI_DRIVER)
 #define LOG_MODULE_NAME bt_ctlr_hci_driver

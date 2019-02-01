@@ -10,7 +10,7 @@
 #include <kernel_includes.h>
 #include <clock_control.h>
 #include <ble_controller_soc.h>
-#include "lock.h"
+#include "multithreading_lock.h"
 
 static inline int ble_controller_hf_clock_request_wlock(
 	ble_controller_hf_clock_callback_t on_started)
