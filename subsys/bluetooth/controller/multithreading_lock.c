@@ -14,7 +14,6 @@ K_SEM_DEFINE(ble_controller_lock, 1, 1);
 
 int api_lock(void)
 {
-	//printk("locking\n");
 #if defined(CONFIG_BLECTLR_SHARED_API_BLOCKING)
 #if defined(CONFIG_BLECTLR_SHARED_API_BLOCKING_WITH_TIMEOUT)
 	return k_sem_take(&ble_controller_lock,

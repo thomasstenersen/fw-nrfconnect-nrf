@@ -27,7 +27,7 @@ extern "C" {
 /** Macro representation for typical usage of locking API */
 #define API_LOCK_AND_RETURN_ON_FAIL(err)                           \
 	do {                                                           \
-		err = api_lock();                                     \
+		err = api_lock();                                          \
 		if (err != 0) {                                            \
 			return err;                                            \
 		}                                                          \
