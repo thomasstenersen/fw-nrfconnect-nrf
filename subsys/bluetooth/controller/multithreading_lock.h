@@ -42,8 +42,8 @@ extern "C" {
  * obtained. If @ref CONFIG_BLECTLR_SHARED_API_BLOCKING is not specified, API will return
  * immediately in the event of not being able to obtain a lock.
  *
- * @retval 0                    Success
- * @retval - ::NRF_EBUSY        Returned without waiting.
+ * @retval 0			Success
+ * @retval - ::NRF_EBUSY	Returned without waiting.
  * @retval - ::NRF_EAGAIN	Waiting period timed out.
  */
 int api_lock(void);
@@ -53,8 +53,8 @@ int api_lock(void);
  * This API is useful for use cases where waiting is not desirable (e.g. calling library API
  * from IRQ).
  *
- * @retval 0                    Success
- * @retval - ::NRF_EBUSY        Returned without waiting.
+ * @retval 0			Success
+ * @retval - ::NRF_EBUSY	Returned without waiting.
  */
 int api_try_lock(void);
 
