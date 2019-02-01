@@ -14,11 +14,11 @@ K_SEM_DEFINE(ble_controller_lock, 1, 1);
 
 int api_lock(void)
 {
-#if defined(CONFIG_BLECTLR_SHARED_API_BLOCKING)
-#if defined(CONFIG_BLECTLR_SHARED_API_BLOCKING_WITH_TIMEOUT)
+#if IS_ENABLED(CONFIG_BLECTLR_SHARED_API_BLOCKING)
+#if IS_ENABLED(CONFIG_BLECTLR_SHARED_API_BLOCKING_WITH_TIMEOUT)
 	return k_sem_take(&ble_controller_lock,
 			  CONFIG_BLECTLR_API_BLOCKING_TIMEOUT_VALUE);
-#elif defined(CONFIG_BLECTLR_SHARED_API_BLOCKING_FOREVER)
+#elif IS_ENABLED(CONFIG_BLECTLR_SHARED_API_BLOCKING_FOREVER)
 	return k_sem_take(&ble_controller_lock, K_FOREVER);
 #else
 	return k_sem_take(&ble_controller_lock, K_FOREVER);
