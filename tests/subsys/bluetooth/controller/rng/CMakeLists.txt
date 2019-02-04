@@ -17,6 +17,7 @@ set(app_sources
 set(OPTIONS
     -DUNIT_TEST
     -DNRF5_IRQ_RNG_IRQn=5
+    -DCONFIG_ENTROPY_NRF5_PRI=5
     -DCONFIG_ENTROPY_NAME="Entropy"
     )
 target_sources(app PRIVATE ${app_sources})
