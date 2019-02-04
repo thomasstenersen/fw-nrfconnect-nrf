@@ -9,15 +9,16 @@
 
 #include <ztest.h>
 #include <stdint.h>
+#include <misc/util.h>
 
 /**
  * @brief Expect the mocked function to be called
  *
  * @param fn Mocked function
  */
-#define mock_expect(fn, times)			       \
+#define mock_expect(fn)			\
 	do {					       \
-		ztest_expect_value(fn, called, times); \
+		ztest_expect_value(fn, called, 1); \
 	} while (0);
 
 /**
@@ -43,15 +44,44 @@
 	} while (0);
 
 /**
- * @brief Obtain stored value in the mocked function
+ * @brief Obtain the stored value in the mocked function
  *
  * Multiple values are obtained in a queue order.
  *
- * @param value
+ * @param var Name of the variable where the obtained value is to be stored
  */
-#define mock_arg_get(value)			  \
+#define mock_arg_get(var)			  \
 	do {					  \
-		value = ztest_get_return_value(); \
+		var = ztest_get_return_value(); \
+	} while (0);
+
+/**
+ * @brief Store the specified array to use it in the mocked function
+ *
+ * Multiple values are stored in a queue order.
+ *
+ * @param fn Mocked function
+ * @param ptr Pointer to the array
+ * @param len The arry length
+ */
+#define mock_arg_array(fn, ptr, len) \
+	do {					\
+		ztest_returns_value(fn, len);	\
+		ztest_returns_value(fn, POINTER_TO_UINT(ptr));	\
+	} while (0);
+
+/**
+ * @brief Obtain stored array in the mocked function
+ *
+ * Multiple arrays are obtained in a queue order.
+ *
+ * @param ptr Pointer to the obtained array
+ * @param len Length of the obrained array
+ */
+#define mock_arg_array_get(ptr, len) \
+	do {					  \
+		len = ztest_get_return_value(); \
+		ptr = UINT_TO_POINTER(ztest_get_return_value()); \
 	} while (0);
 
 #endif /* __MOCK_EXT_H */

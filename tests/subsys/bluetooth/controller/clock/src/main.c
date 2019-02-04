@@ -44,20 +44,20 @@ int32_t ble_controller_hf_clock_is_running(bool *p_is_running)
 /** Helper functions */
 static void clock_request_expect(int32_t retval)
 {
-	mock_expect(ble_controller_hf_clock_request, 1);
+	mock_expect(ble_controller_hf_clock_request);
 	ztest_expect_value(ble_controller_hf_clock_request, on_started, NULL);
 	ztest_returns_value(ble_controller_hf_clock_request, retval);
 }
 
 static void clock_release_expect(int32_t retval)
 {
-	mock_expect(ble_controller_hf_clock_release, 1);
+	mock_expect(ble_controller_hf_clock_release);
 	ztest_returns_value(ble_controller_hf_clock_release, retval);
 }
 
 static void clock_is_running_expect(bool is_running, int32_t retval)
 {
-	mock_expect(ble_controller_hf_clock_is_running, 1);
+	mock_expect(ble_controller_hf_clock_is_running);
 	mock_arg(ble_controller_hf_clock_is_running, is_running);
 	ztest_returns_value(ble_controller_hf_clock_is_running, retval);
 }
