@@ -22,17 +22,27 @@ LOG_MODULE_REGISTER(LOG_MODULE_NAME, LOG_LEVEL_DBG);
 
 int bt_rand(void *buf, size_t len)
 {
-	// @todo: support CONFIG_MULTITHREADING
-
-	if (len > UINT8_MAX || buf == NULL) {
+	if (buf == NULL) {
 		return -NRF_EINVAL;
 	}
 
-	uint32_t errcode = ble_controller_rand_application_vector_get(buf, (uint8_t) len);
+	u8_t *buf8 = buf;
 
-	LOG_INF("rand bytes %d\n", errcode);
+	while (len) {
+		u32_t v = sys_rand32_get();
 
-	return errcode;
+		if (len >= sizeof(v)) {
+			memcpy(buf8, &v, sizeof(v));
+
+			buf8 += sizeof(v);
+			len -= sizeof(v);
+		} else {
+			memcpy(buf8, &v, len);
+			break;
+		}
+	}
+
+	return 0;
 }
 
 int bt_encrypt_le(const u8_t key[16], const u8_t plaintext[16], u8_t enc_data[16])
