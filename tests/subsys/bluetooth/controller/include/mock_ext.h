@@ -16,8 +16,8 @@
  *
  * @param fn Mocked function
  */
-#define mock_expect(fn)			\
-	do {					       \
+#define mock_expect(fn)				   \
+	do {					   \
 		ztest_expect_value(fn, called, 1); \
 	} while (0);
 
@@ -50,9 +50,9 @@
  *
  * @param var Name of the variable where the obtained value is to be stored
  */
-#define mock_arg_get(var)			  \
-	do {					  \
-		var = ztest_get_return_value(); \
+#define mock_arg_get(var)			\
+	do {					\
+		var = ztest_get_return_value();	\
 	} while (0);
 
 /**
@@ -64,10 +64,10 @@
  * @param ptr Pointer to the array
  * @param len The arry length
  */
-#define mock_arg_array(fn, ptr, len) \
-	do {					\
-		ztest_returns_value(fn, len);	\
-		ztest_returns_value(fn, POINTER_TO_UINT(ptr));	\
+#define mock_arg_array(fn, ptr, len)			       \
+	do {						       \
+		ztest_returns_value(fn, len);		       \
+		ztest_returns_value(fn, POINTER_TO_UINT(ptr)); \
 	} while (0);
 
 /**
@@ -78,9 +78,9 @@
  * @param ptr Pointer to the obtained array
  * @param len Length of the obrained array
  */
-#define mock_arg_array_get(ptr, len) \
-	do {					  \
-		len = ztest_get_return_value(); \
+#define mock_arg_array_get(ptr, len)				 \
+	do {							 \
+		len = ztest_get_return_value();			 \
 		ptr = UINT_TO_POINTER(ztest_get_return_value()); \
 	} while (0);
 

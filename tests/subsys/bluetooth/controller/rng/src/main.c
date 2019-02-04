@@ -25,23 +25,23 @@ static uint8_t rand_pool[BUFFER_LENGTH];
 
 /* This could only be a macro because ztest_returns_value() uses __func__ inside
  * to get the stored value. */
-#define rand_pool_to_buffer_copy(p_dst, length) \
-	{ \
-		uint8_t *p_rand_pool; \
-		uint8_t rand_pool_length; \
-		mock_arg_array_get(p_rand_pool, rand_pool_length); \
-		if (p_rand_pool != NULL) { \
-			zassert_equal(rand_pool_length, length, \
-				"Rand pool length should be equal to the provided buffer lenght"); \
-			if (rand_pool_length > 0) { \
-				memcpy(p_dst, p_rand_pool, rand_pool_length); \
-			} \
-		} \
+#define rand_pool_to_buffer_copy(p_dst, length)								 \
+	{												 \
+		uint8_t *p_rand_pool;									 \
+		uint8_t rand_pool_length;								 \
+		mock_arg_array_get(p_rand_pool, rand_pool_length);					 \
+		if (p_rand_pool != NULL) {								 \
+			zassert_equal(rand_pool_length, length,						 \
+				      "Rand pool length should be equal to the provided buffer lenght"); \
+			if (rand_pool_length > 0) {							 \
+				memcpy(p_dst, p_rand_pool, rand_pool_length);				 \
+			}										 \
+		}											 \
 	} while (0)
 
 /** Extern declaration */
 struct device *rng_driver_get(void);
-struct k_sem * rng_driver_sema_sync_get(void);
+struct k_sem *rng_driver_sema_sync_get(void);
 
 /** Mocked functions */
 void ble_controller_RNG_IRQHandler(void)
@@ -49,7 +49,7 @@ void ble_controller_RNG_IRQHandler(void)
 	/* Stub */
 }
 
-int32_t ble_controller_rand_pool_capacity_get(uint8_t * p_pool_capacity)
+int32_t ble_controller_rand_pool_capacity_get(uint8_t *p_pool_capacity)
 {
 	mock_check_expected();
 
@@ -58,7 +58,7 @@ int32_t ble_controller_rand_pool_capacity_get(uint8_t * p_pool_capacity)
 	return (int32_t)ztest_get_return_value();
 }
 
-int32_t ble_controller_rand_application_vector_get(uint8_t * p_dst, uint8_t length)
+int32_t ble_controller_rand_application_vector_get(uint8_t *p_dst, uint8_t length)
 {
 	mock_check_expected();
 
@@ -75,7 +75,7 @@ int32_t ble_controller_rand_application_vector_get(uint8_t * p_dst, uint8_t leng
 	return retval;
 }
 
-int32_t ble_controller_rand_prio_low_vector_get(uint8_t * p_dst, uint8_t length)
+int32_t ble_controller_rand_prio_low_vector_get(uint8_t *p_dst, uint8_t length)
 {
 	mock_check_expected();
 
@@ -87,7 +87,7 @@ int32_t ble_controller_rand_prio_low_vector_get(uint8_t * p_dst, uint8_t length)
 	return (int32_t)ztest_get_return_value();
 }
 
-void ble_controller_rand_prio_low_vector_get_blocking(uint8_t * p_dst, uint8_t length)
+void ble_controller_rand_prio_low_vector_get_blocking(uint8_t *p_dst, uint8_t length)
 {
 	mock_check_expected();
 
@@ -101,8 +101,8 @@ void ble_controller_rand_prio_low_vector_get_blocking(uint8_t * p_dst, uint8_t l
 static void rand_pool_fill(uint8_t *p_rand_pool, uint16_t length)
 {
 	static uint8_t shift; /**< To "randomize" values between tests. */
-	for (uint16_t i = 0; i < length; i++)
-	{
+
+	for (uint16_t i = 0; i < length; i++) {
 		p_rand_pool[i] = (uint8_t)i + shift;
 	}
 	shift++;
@@ -116,8 +116,8 @@ static void capacity_get_expect(uint8_t capacity, int32_t return_value)
 }
 
 static void app_vector_get_expect(uint8_t *p_dst, uint8_t length,
-								  uint8_t *p_rand_pool, uint8_t rand_pool_length,
-								  int return_value)
+				  uint8_t *p_rand_pool, uint8_t rand_pool_length,
+				  int return_value)
 {
 	mock_expect(ble_controller_rand_application_vector_get);
 
@@ -130,8 +130,8 @@ static void app_vector_get_expect(uint8_t *p_dst, uint8_t length,
 }
 
 static void prio_low_vector_get_expect(uint8_t *p_dst, uint8_t length,
-									   uint8_t *p_rand_pool, uint8_t rand_pool_length,
-									   int return_value)
+				       uint8_t *p_rand_pool, uint8_t rand_pool_length,
+				       int return_value)
 {
 	mock_expect(ble_controller_rand_prio_low_vector_get);
 
@@ -144,7 +144,7 @@ static void prio_low_vector_get_expect(uint8_t *p_dst, uint8_t length,
 }
 
 static void prio_low_vector_get_blocking_expect(uint8_t *p_dst, uint8_t length,
-												uint8_t *p_rand_pool, uint8_t rand_pool_length)
+						uint8_t *p_rand_pool, uint8_t rand_pool_length)
 {
 	mock_expect(ble_controller_rand_prio_low_vector_get_blocking);
 
@@ -158,6 +158,7 @@ static void prio_low_vector_get_blocking_expect(uint8_t *p_dst, uint8_t length,
 void test_driver_init(void)
 {
 	struct device *dev = device_get_binding(CONFIG_ENTROPY_NAME);
+
 	zassert_not_null(dev, "Entropy driver shouldn't be null");
 
 	struct k_sem *p_sema_sync = rng_driver_sema_sync_get();
@@ -168,6 +169,7 @@ void test_driver_init(void)
 void test_error_cases(void)
 {
 	struct device *dev = device_get_binding(CONFIG_ENTROPY_NAME);
+
 	zassert_not_null(dev, "Device is null");
 	memset(buffer, 0, sizeof(buffer));
 
@@ -187,6 +189,7 @@ void test_error_cases(void)
 void test_thread_mode_entropy_less_than_capacity(void)
 {
 	struct device *dev = device_get_binding(CONFIG_ENTROPY_NAME);
+
 	memset(buffer, 0, sizeof(buffer));
 
 	rand_pool_fill(rand_pool, 64);
@@ -201,18 +204,18 @@ void test_thread_mode_entropy_less_than_capacity(void)
 void test_thread_mode_entropy_greater_than_capacity(void)
 {
 	struct device *dev = device_get_binding(CONFIG_ENTROPY_NAME);
+
 	memset(buffer, 0, sizeof(buffer));
 
 	rand_pool_fill(rand_pool, BUFFER_LENGTH);
 
 	/* Request vector of randoms that bigger than the pool capacity. */
 	capacity_get_expect(100, 0);
-	for (size_t i = 0; i < BUFFER_LENGTH / 100; i++)
-	{
+	for (size_t i = 0; i < BUFFER_LENGTH / 100; i++) {
 		app_vector_get_expect(&buffer[i * 100], 100, &rand_pool[i * 100], 100, 0);
 	}
 	app_vector_get_expect(&buffer[BUFFER_LENGTH - BUFFER_LENGTH % 100], BUFFER_LENGTH % 100,
-						&rand_pool[BUFFER_LENGTH - BUFFER_LENGTH % 100], BUFFER_LENGTH % 100, 0);
+			      &rand_pool[BUFFER_LENGTH - BUFFER_LENGTH % 100], BUFFER_LENGTH % 100, 0);
 	zassert_equal(entropy_get_entropy(dev, buffer, BUFFER_LENGTH), 0, "Failed to get rand vector");
 	zassert_false(memcmp(buffer, rand_pool, BUFFER_LENGTH), "Rand data mismatch");
 }
@@ -220,6 +223,7 @@ void test_thread_mode_entropy_greater_than_capacity(void)
 void test_thread_mode_not_enough_bytes(void)
 {
 	struct device *dev = device_get_binding(CONFIG_ENTROPY_NAME);
+
 	memset(buffer, 0, sizeof(buffer));
 
 	rand_pool_fill(rand_pool, 64);
@@ -236,6 +240,7 @@ void test_thread_mode_not_enough_bytes(void)
 void test_isr_mode_no_wait_less_than_capacity(void)
 {
 	struct device *dev = device_get_binding(CONFIG_ENTROPY_NAME);
+
 	memset(buffer, 0, sizeof(buffer));
 
 	rand_pool_fill(rand_pool, 64);
@@ -250,6 +255,7 @@ void test_isr_mode_no_wait_less_than_capacity(void)
 void test_isr_mode_no_wait_greater_than_capacity(void)
 {
 	struct device *dev = device_get_binding(CONFIG_ENTROPY_NAME);
+
 	memset(buffer, 0, sizeof(buffer));
 
 	/* Request vector of randoms that greater than the pool capacity. */
@@ -262,6 +268,7 @@ void test_isr_mode_no_wait_greater_than_capacity(void)
 void test_isr_mode_busywait_less_than_capacity()
 {
 	struct device *dev = device_get_binding(CONFIG_ENTROPY_NAME);
+
 	memset(buffer, 0, sizeof(buffer));
 
 	/* Request vector of randoms that lesser than the pool capacity. */
@@ -274,19 +281,19 @@ void test_isr_mode_busywait_less_than_capacity()
 void test_isr_mode_busywait_greater_than_capacity()
 {
 	struct device *dev = device_get_binding(CONFIG_ENTROPY_NAME);
+
 	memset(buffer, 0, sizeof(buffer));
 
 	rand_pool_fill(rand_pool, BUFFER_LENGTH);
 
 	/* Request vector of randoms that greater than the pool capacity. */
 	capacity_get_expect(100, 0);
-	for (size_t i = 0; i < BUFFER_LENGTH / 100; i++)
-	{
+	for (size_t i = 0; i < BUFFER_LENGTH / 100; i++) {
 		prio_low_vector_get_blocking_expect(&buffer[i * 100], 100,
-				&rand_pool[i * 100], 100);
+						    &rand_pool[i * 100], 100);
 	}
 	prio_low_vector_get_blocking_expect(&buffer[BUFFER_LENGTH - BUFFER_LENGTH % 100], BUFFER_LENGTH % 100,
-			&rand_pool[BUFFER_LENGTH - BUFFER_LENGTH % 100], BUFFER_LENGTH % 100);
+					    &rand_pool[BUFFER_LENGTH - BUFFER_LENGTH % 100], BUFFER_LENGTH % 100);
 	zassert_equal(entropy_get_entropy_isr(dev, buffer, BUFFER_LENGTH, ENTROPY_BUSYWAIT), BUFFER_LENGTH, "Failed to get rand vector");
 	zassert_false(memcmp(buffer, rand_pool, BUFFER_LENGTH), "Rand data mismatch");
 }
