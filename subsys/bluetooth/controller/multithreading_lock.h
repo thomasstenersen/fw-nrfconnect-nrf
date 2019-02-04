@@ -19,40 +19,51 @@ extern "C" {
 
 #include <zephyr.h>
 
-/** Macro representation for unlock API */
+/** Macro for calling ble controller API with a return value in threadsafe manner */
 #if IS_ENABLED(CONFIG_BLECTLR_THREADSAFE_BLOCKING)
-#define API_UNLOCK multithreading_lock_unlock()
-#else
-#define API_UNLOCK
-#endif
-
-/** Macro representation for typical usage of locking API */
-#if IS_ENABLED(CONFIG_BLECTLR_THREADSAFE_BLOCKING)
-#define API_LOCK_AND_RETURN_ON_FAIL \
-	do {			    \
-		s32_t err = multithreading_lock();   \
-		if (err != 0) {	    \
-			return err; \
-		}		    \
+#define THREADSAFE_CALL_WITH_RETCODE(ERROR_CODE_VAR, FUNC_CALL)                 \
+	do {                                                                   \
+		ERROR_CODE_VAR = multithreading_lock_acquire();                \
+		if (ERROR_CODE_VAR == 0) {                                     \
+			ERROR_CODE_VAR = FUNC_CALL;                            \
+			multithreading_lock_release();                         \
+		}                                                              \
 	} while (0)
 #else
-#define API_LOCK_AND_RETURN_ON_FAIL
+#define THREADSAFE_CALL_WITH_RETCODE(ERROR_CODE_VAR, FUNC_CALL)                 \
+	do {                                                                   \
+		ERROR_CODE_VAR = FUNC_CALL;                                    \
+	} while (0)
+#endif
+
+/** Macro for calling ble controller API without a return value in threadsafe manner */
+#if IS_ENABLED(CONFIG_BLECTLR_THREADSAFE_BLOCKING)
+#define THREADSAFE_CALL_WITHOUT_RETCODE(ERROR_CODE_VAR, FUNC_CALL)              \
+	do {                                                                   \
+		ERROR_CODE_VAR = multithreading_lock_acquire();                \
+		if (ERROR_CODE_VAR == 0) {                                     \
+			FUNC_CALL;                                             \
+			multithreading_lock_release();                         \
+		}                                                              \
+	} while (0)
+#else
+#define THREADSAFE_CALL_WITHOUT_RETCODE(ERROR_CODE_VAR, FUNC_CALL)              \
+	do {                                                                   \
+		FUNC_CALL;                                                     \
+		ERROR_CODE_VAR = 0;                                            \
+	} while (0)
 #endif
 
 /** @brief Try to take the lock while maintaining the specified blocking behavior.
  *
- * This API call will be blocked forever if @ref CONFIG_BLECTLR_THREADSAFE_BLOCKING and
- * @ref CONFIG_BLECTLR_THREADSAFE_BLOCKING_FOREVER options are selected. Otherwise API call
- * will wait for timeout with a given timeout value specified by
- * @ref CONFIG_BLECTLR_THREADSAFE_BLOCKING_WITH_TIMEOUT and return error if lock cannot be
- * obtained. If @ref CONFIG_BLECTLR_THREADSAFE_BLOCKING is not specified, API will return
- * immediately in the event of not being able to obtain a lock.
+ * This API call will be blocked for the time specified by @ref
+ * CONFIG_BLECTLR_THREADSAFE_BLOCKING_TIMEOUT and then return error code.
  *
  * @retval 0			Success
  * @retval - ::NRF_EBUSY	Returned without waiting.
  * @retval - ::NRF_EAGAIN	Waiting period timed out.
  */
-int multithreading_lock(void);
+int multithreading_lock_acquire(void);
 
 /** @brief Try to take the lock and return immediately on failure.
  *
@@ -62,14 +73,13 @@ int multithreading_lock(void);
  * @retval 0			Success
  * @retval - ::NRF_EBUSY	Returned without waiting.
  */
-int multithreading_lock_try(void);
+int multithreading_lock_acquire_try(void);
 
 /** @brief Unlock the lock.
  *
- * @note This API is must be called only after lock is obtained. Otherwise it will block
- * execution for forever.
+ * @note This API is must be called only after lock is obtained.
  */
-void multithreading_lock_unlock(void);
+void multithreading_lock_release(void);
 
 #ifdef __cplusplus
 }

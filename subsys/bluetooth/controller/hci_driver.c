@@ -39,31 +39,12 @@ void blectlr_assertion_handler(const char *const file, const u32_t line)
 #endif
 }
 
-static inline int hci_cmd_put_wlock(u8_t *p_data)
-{
-	int errcode;
-
-	API_LOCK_AND_RETURN_ON_FAIL;
-	errcode = hci_cmd_put(p_data);
-	API_UNLOCK;
-
-	return errcode;
-}
-
-static inline int hci_data_put_wlock(u8_t *p_data)
-{
-	int errcode;
-
-	API_LOCK_AND_RETURN_ON_FAIL;
-	errcode = hci_data_put(p_data);
-	API_UNLOCK;
-
-	return errcode;
-}
-
 static int cmd_handle(struct net_buf *cmd)
 {
-	if (hci_cmd_put_wlock(cmd->data)) {
+	int errcode;
+	THREADSAFE_CALL_WITH_RETCODE(errcode, hci_cmd_put(cmd->data));
+
+	if (errcode) {
 		return -ENOBUFS;
 	}
 
@@ -75,7 +56,9 @@ static int cmd_handle(struct net_buf *cmd)
 #if defined(CONFIG_BT_CONN)
 static int acl_handle(struct net_buf *acl)
 {
-	if (hci_data_put_wlock(acl->data)) {
+	int errcode;
+	THREADSAFE_CALL_WITH_RETCODE(errcode, hci_data_put(acl->data));
+	if (errcode) {
 		/* Likely buffer overflow event */
 		k_sem_give(&sem_recv);
 		return -ENOBUFS;
@@ -183,28 +166,6 @@ static void event_packet_process(u8_t *hci_buf)
 	}
 }
 
-static inline int hci_data_get_wlock(u8_t *hci_buffer)
-{
-	int errcode;
-
-	API_LOCK_AND_RETURN_ON_FAIL;
-	errcode = hci_data_get(hci_buffer);
-	API_UNLOCK;
-
-	return errcode;
-}
-
-static inline int hci_evt_get_wlock(u8_t *hci_buffer)
-{
-	int errcode;
-
-	API_LOCK_AND_RETURN_ON_FAIL;
-	errcode = hci_evt_get(hci_buffer);
-	API_UNLOCK;
-
-	return errcode;
-}
-
 static void recv_thread(void *p1, void *p2, void *p3)
 {
 	ARG_UNUSED(p1);
@@ -217,13 +178,27 @@ static void recv_thread(void *p1, void *p2, void *p3)
 	while (1) {
 		k_sem_take(&sem_recv, K_FOREVER);
 
-		while (hci_data_get_wlock(hci_buffer) == 0) {
-			data_packet_process(hci_buffer);
-		}
+		while (1) {
+			int errcode;
+			THREADSAFE_CALL_WITH_RETCODE(errcode, hci_data_get(hci_buffer));
+			if (errcode == 0) {
+				data_packet_process(hci_buffer);
+			} else {
+				break;
+			}
+		};
 
-		while (hci_evt_get_wlock(hci_buffer) == 0) {
-			event_packet_process(hci_buffer);
-		}
+		while (1) {
+			int errcode;
+			THREADSAFE_CALL_WITH_RETCODE(
+				errcode, hci_evt_get(hci_buffer));
+			if (errcode == 0) {
+				event_packet_process(hci_buffer);
+			} else {
+				break;
+			}
+		};
+
 
 		/* Let other threads of same priority run in between. */
 		k_yield();
@@ -294,10 +269,10 @@ static s32_t ble_init(void)
 	resource_cfg.role_cfg.master_count = 1;
 	resource_cfg.role_cfg.slave_count = 1;
 
-	API_LOCK_AND_RETURN_ON_FAIL;
-	err = ble_controller_resource_cfg_set(
-		BLE_CONTROLLER_DEFAULT_RESOURCE_CFG_TAG, &resource_cfg);
-	API_UNLOCK;
+	THREADSAFE_CALL_WITH_RETCODE(
+		err, ble_controller_resource_cfg_set(
+			BLE_CONTROLLER_DEFAULT_RESOURCE_CFG_TAG,
+			&resource_cfg));
 
 	if (err < 0 || err > sizeof(ble_controller_mempool)) {
 		return err;
@@ -345,10 +320,10 @@ static s32_t ble_init(void)
 	clock_cfg.rc_ctiv = BLE_CONTROLLER_RECOMMENDED_RC_CTIV;
 	clock_cfg.rc_temp_ctiv = BLE_CONTROLLER_RECOMMENDED_RC_TEMP_CTIV;
 
-	API_LOCK_AND_RETURN_ON_FAIL;
-	err = ble_controller_enable(host_signal, blectlr_assertion_handler,
-				    &clock_cfg, ble_controller_mempool);
-	API_UNLOCK;
+	THREADSAFE_CALL_WITH_RETCODE(
+		err,
+		ble_controller_enable(host_signal, blectlr_assertion_handler,
+				      &clock_cfg, ble_controller_mempool));
 
 	if (err < 0) {
 		return err;

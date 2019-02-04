@@ -12,42 +12,13 @@
 #include <ble_controller_soc.h>
 #include "multithreading_lock.h"
 
-static inline int ble_controller_hf_clock_request_wlock(
-	ble_controller_hf_clock_callback_t on_started)
-{
-	s32_t errcode;
-	API_LOCK_AND_RETURN_ON_FAIL;
-	errcode = ble_controller_hf_clock_request(on_started);
-	API_UNLOCK;
-
-	return errcode;
-}
-
-static inline int ble_controller_hf_clock_is_running_wlock(bool *p_is_running)
-{
-	s32_t errcode;
-	API_LOCK_AND_RETURN_ON_FAIL;
-	errcode = ble_controller_hf_clock_is_running(p_is_running);
-	API_UNLOCK;
-
-	return errcode;
-}
-
-static inline int ble_controller_hf_clock_release_wlock(void)
-{
-	s32_t errcode;
-	API_LOCK_AND_RETURN_ON_FAIL;
-	errcode = ble_controller_hf_clock_release();
-	API_UNLOCK;
-
-	return errcode;
-}
-
 static int hf_clock_start(struct device *dev, clock_control_subsys_t sub_system)
 {
 	ARG_UNUSED(dev);
 
-	if (ble_controller_hf_clock_request_wlock(NULL) != 0) {
+	int errcode;
+	THREADSAFE_CALL_WITH_RETCODE(errcode, ble_controller_hf_clock_request(NULL));
+	if (errcode != 0) {
 		return -EFAULT;
 	}
 
@@ -55,8 +26,10 @@ static int hf_clock_start(struct device *dev, clock_control_subsys_t sub_system)
 	if (blocking) {
 		bool is_running = false;
 		while (!is_running) {
-			if (ble_controller_hf_clock_is_running_wlock(
-				    &is_running) != 0) {
+			int errcode;
+			THREADSAFE_CALL_WITH_RETCODE(errcode, ble_controller_hf_clock_is_running(
+				    &is_running));
+			if (errcode != 0) {
 				return -EFAULT;
 			}
 		}
@@ -70,7 +43,9 @@ static int hf_clock_stop(struct device *dev, clock_control_subsys_t sub_system)
 	ARG_UNUSED(dev);
 	ARG_UNUSED(sub_system);
 
-	if (ble_controller_hf_clock_release_wlock() != 0) {
+	int errcode;
+	THREADSAFE_CALL_WITH_RETCODE(errcode, ble_controller_hf_clock_release());
+	if (errcode != 0) {
 		return -EFAULT;
 	}
 
