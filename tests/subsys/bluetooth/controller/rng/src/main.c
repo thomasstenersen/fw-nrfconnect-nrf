@@ -17,6 +17,8 @@
 #define LOG_MODULE_NAME test_ble_controller_rng
 LOG_MODULE_REGISTER(LOG_MODULE_NAME, LOG_LEVEL_DBG);
 
+#define SEM_GIVE_ERROR (-0xFF)
+
 /* The ble controller poll length is limited to UINT8_MAX. This should be
  * more than uint8_t to ensure it fills the whole buffer. */
 #define BUFFER_LENGTH 1024
@@ -58,7 +60,7 @@ int32_t ble_controller_rand_pool_capacity_get(uint8_t *p_pool_capacity)
 	return (int32_t)ztest_get_return_value();
 }
 
-int32_t ble_controller_rand_application_vector_get(uint8_t *p_dst, uint8_t length)
+int32_t ble_controller_rand_vector_get(uint8_t *p_dst, uint8_t length)
 {
 	mock_check_expected();
 
@@ -68,26 +70,14 @@ int32_t ble_controller_rand_application_vector_get(uint8_t *p_dst, uint8_t lengt
 	rand_pool_to_buffer_copy(p_dst, length);
 
 	int32_t retval = (int32_t)ztest_get_return_value();
-	if (retval != 0) {
+	if (retval == SEM_GIVE_ERROR) {
 		k_sem_give(rng_driver_sema_sync_get());
 	}
 
 	return retval;
 }
 
-int32_t ble_controller_rand_prio_low_vector_get(uint8_t *p_dst, uint8_t length)
-{
-	mock_check_expected();
-
-	ztest_check_expected_value(p_dst);
-	ztest_check_expected_value(length);
-
-	rand_pool_to_buffer_copy(p_dst, length);
-
-	return (int32_t)ztest_get_return_value();
-}
-
-void ble_controller_rand_prio_low_vector_get_blocking(uint8_t *p_dst, uint8_t length)
+void ble_controller_rand_vector_get_blocking(uint8_t *p_dst, uint8_t length)
 {
 	mock_check_expected();
 
@@ -115,43 +105,29 @@ static void capacity_get_expect(uint8_t capacity, int32_t return_value)
 	ztest_returns_value(ble_controller_rand_pool_capacity_get, return_value);
 }
 
-static void app_vector_get_expect(uint8_t *p_dst, uint8_t length,
-				  uint8_t *p_rand_pool, uint8_t rand_pool_length,
-				  int return_value)
-{
-	mock_expect(ble_controller_rand_application_vector_get);
-
-	ztest_expect_value(ble_controller_rand_application_vector_get, p_dst, p_dst);
-	ztest_expect_value(ble_controller_rand_application_vector_get, length, length);
-
-	mock_arg_array(ble_controller_rand_application_vector_get, p_rand_pool, rand_pool_length);
-
-	ztest_returns_value(ble_controller_rand_application_vector_get, return_value);
-}
-
 static void prio_low_vector_get_expect(uint8_t *p_dst, uint8_t length,
 				       uint8_t *p_rand_pool, uint8_t rand_pool_length,
 				       int return_value)
 {
-	mock_expect(ble_controller_rand_prio_low_vector_get);
+	mock_expect(ble_controller_rand_vector_get);
 
-	ztest_expect_value(ble_controller_rand_prio_low_vector_get, p_dst, p_dst);
-	ztest_expect_value(ble_controller_rand_prio_low_vector_get, length, length);
+	ztest_expect_value(ble_controller_rand_vector_get, p_dst, p_dst);
+	ztest_expect_value(ble_controller_rand_vector_get, length, length);
 
-	mock_arg_array(ble_controller_rand_prio_low_vector_get, p_rand_pool, rand_pool_length);
+	mock_arg_array(ble_controller_rand_vector_get, p_rand_pool, rand_pool_length);
 
-	ztest_returns_value(ble_controller_rand_prio_low_vector_get, return_value);
+	ztest_returns_value(ble_controller_rand_vector_get, return_value);
 }
 
 static void prio_low_vector_get_blocking_expect(uint8_t *p_dst, uint8_t length,
 						uint8_t *p_rand_pool, uint8_t rand_pool_length)
 {
-	mock_expect(ble_controller_rand_prio_low_vector_get_blocking);
+	mock_expect(ble_controller_rand_vector_get_blocking);
 
-	ztest_expect_value(ble_controller_rand_prio_low_vector_get_blocking, p_dst, p_dst);
-	ztest_expect_value(ble_controller_rand_prio_low_vector_get_blocking, length, length);
+	ztest_expect_value(ble_controller_rand_vector_get_blocking, p_dst, p_dst);
+	ztest_expect_value(ble_controller_rand_vector_get_blocking, length, length);
 
-	mock_arg_array(ble_controller_rand_prio_low_vector_get_blocking, p_rand_pool, rand_pool_length);
+	mock_arg_array(ble_controller_rand_vector_get_blocking, p_rand_pool, rand_pool_length);
 }
 
 /** Tests */
@@ -196,7 +172,7 @@ void test_thread_mode_entropy_less_than_capacity(void)
 
 	/* Request vector of randoms that lesser than the pool capacity. */
 	capacity_get_expect(100, 0);
-	app_vector_get_expect(buffer, 64, rand_pool, 64, 0);
+	prio_low_vector_get_expect(buffer, 64, rand_pool, 64, 0);
 	zassert_equal(entropy_get_entropy(dev, buffer, 64), 0, "Failed to get rand vector");
 	zassert_false(memcmp(buffer, rand_pool, 64), "Rand data mismatch");
 }
@@ -212,9 +188,9 @@ void test_thread_mode_entropy_greater_than_capacity(void)
 	/* Request vector of randoms that bigger than the pool capacity. */
 	capacity_get_expect(100, 0);
 	for (size_t i = 0; i < BUFFER_LENGTH / 100; i++) {
-		app_vector_get_expect(&buffer[i * 100], 100, &rand_pool[i * 100], 100, 0);
+		prio_low_vector_get_expect(&buffer[i * 100], 100, &rand_pool[i * 100], 100, 0);
 	}
-	app_vector_get_expect(&buffer[BUFFER_LENGTH - BUFFER_LENGTH % 100], BUFFER_LENGTH % 100,
+	prio_low_vector_get_expect(&buffer[BUFFER_LENGTH - BUFFER_LENGTH % 100], BUFFER_LENGTH % 100,
 			      &rand_pool[BUFFER_LENGTH - BUFFER_LENGTH % 100], BUFFER_LENGTH % 100, 0);
 	zassert_equal(entropy_get_entropy(dev, buffer, BUFFER_LENGTH), 0, "Failed to get rand vector");
 	zassert_false(memcmp(buffer, rand_pool, BUFFER_LENGTH), "Rand data mismatch");
@@ -231,8 +207,8 @@ void test_thread_mode_not_enough_bytes(void)
 	/* Simulate the case when the entropy_get_entropy() call gets blocked until
 	 * more bytes generated . */
 	capacity_get_expect(100, 0);
-	app_vector_get_expect(buffer, 64, rand_pool, 64, -1);
-	app_vector_get_expect(buffer, 64, rand_pool, 64, 0);
+	prio_low_vector_get_expect(buffer, 64, rand_pool, 64, SEM_GIVE_ERROR);
+	prio_low_vector_get_expect(buffer, 64, rand_pool, 64, 0);
 	zassert_equal(entropy_get_entropy(dev, buffer, 64), 0, "Failed to get rand vector");
 	zassert_false(memcmp(buffer, rand_pool, 64), "Rand data mismatch");
 }
