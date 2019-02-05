@@ -29,20 +29,20 @@ static int rng_driver_get_entropy(struct device *dev, u8_t *buf, u16_t len)
 {
 	__ASSERT_NO_MSG(&rng_data == DEV_DATA(dev));
 
-	u16_t bread;
-	while (len > 0) {
-		bread = min(len, (u16_t)rng_data.pool_capacity);
+	u16_t bytes_to_read;
+	u8_t *p_dst = buf;
+	u16_t bytes_left = len;
+	while (bytes_left > 0) {
+		bytes_to_read = min(bytes_left, (u16_t)rng_data.pool_capacity);
 
-		__ASSERT_NO_MSG(bread <= (uint8_t)(-1));
-
-		while (ble_controller_rand_vector_get(buf, (uint8_t)bread) != 0) {
+		while (ble_controller_rand_vector_get(p_dst, (uint8_t)bytes_to_read) != 0) {
 			/* Put the thread on wait until next interrupt to get more
 			 * random values. */
 			k_sem_take(&rng_data.sem_sync, K_FOREVER);
 		}
 
-		buf += bread;
-		len -= bread;
+		p_dst += bytes_to_read;
+		bytes_left -= bytes_to_read;
 	}
 
 	return 0;
@@ -59,17 +59,16 @@ static int rng_driver_get_entropy_isr(struct device *dev, u8_t *buf, u16_t len,
 		return errcode == 0 ? bytes_available : -EINVAL;
 	}
 
-	u16_t bread;
-	u16_t bleft = len;
-	while (bleft > 0) {
-		bread = min(bleft, (u16_t)rng_data.pool_capacity);
+	u16_t bytes_to_read;
+	u16_t bytes_left = len;
+	u8_t *p_dst = buf;
+	while (bytes_left > 0) {
+		bytes_to_read = min(bytes_left, (u16_t)rng_data.pool_capacity);
 
-		__ASSERT_NO_MSG(bread <= (uint8_t)(-1));
+		ble_controller_rand_vector_get_blocking(p_dst, (uint8_t) bytes_to_read);
 
-		ble_controller_rand_vector_get_blocking(buf, (uint8_t) bread);
-
-		buf += bread;
-		bleft -= bread;
+		p_dst += bytes_to_read;
+		bytes_left -= bytes_to_read;
 	}
 
 	return len;
