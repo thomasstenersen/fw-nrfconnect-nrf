@@ -5,7 +5,7 @@
  */
 
 /**
- * @lock.h
+ * @multithreading_lock.h
  *
  * @brief This file defines APIs needed to lock the BLE controller APIs for threadsafe operation.
  */
@@ -19,39 +19,19 @@ extern "C" {
 
 #include <zephyr.h>
 
-/** Macro for calling ble controller API with a return value in threadsafe manner */
+/** Macro for acquiring a lock */
 #if IS_ENABLED(CONFIG_BLECTLR_THREADSAFE_BLOCKING)
-#define THREADSAFE_CALL_WITH_RETCODE(ERROR_CODE_VAR, FUNC_CALL)                 \
-	do {                                                                   \
-		ERROR_CODE_VAR = multithreading_lock_acquire();                \
-		if (ERROR_CODE_VAR == 0) {                                     \
-			ERROR_CODE_VAR = FUNC_CALL;                            \
-			multithreading_lock_release();                         \
-		}                                                              \
-	} while (0)
+#define MULTITHREADING_LOCK_ACQUIRE() \
+	multithreading_lock_acquire(CONFIG_BLECTLR_THREADSAFE_BLOCKING_TIMEOUT)
 #else
-#define THREADSAFE_CALL_WITH_RETCODE(ERROR_CODE_VAR, FUNC_CALL)                 \
-	do {                                                                   \
-		ERROR_CODE_VAR = FUNC_CALL;                                    \
-	} while (0)
+#define MULTITHREADING_LOCK_ACQUIRE() (0)
 #endif
 
-/** Macro for calling ble controller API without a return value in threadsafe manner */
+/** Macro for releasing a lock */
 #if IS_ENABLED(CONFIG_BLECTLR_THREADSAFE_BLOCKING)
-#define THREADSAFE_CALL_WITHOUT_RETCODE(ERROR_CODE_VAR, FUNC_CALL)              \
-	do {                                                                   \
-		ERROR_CODE_VAR = multithreading_lock_acquire();                \
-		if (ERROR_CODE_VAR == 0) {                                     \
-			FUNC_CALL;                                             \
-			multithreading_lock_release();                         \
-		}                                                              \
-	} while (0)
+#define MULTITHREADING_LOCK_RELEASE() multithreading_lock_release()
 #else
-#define THREADSAFE_CALL_WITHOUT_RETCODE(ERROR_CODE_VAR, FUNC_CALL)              \
-	do {                                                                   \
-		FUNC_CALL;                                                     \
-		ERROR_CODE_VAR = 0;                                            \
-	} while (0)
+#define MULTITHREADING_LOCK_RELEASE()
 #endif
 
 /** @brief Try to take the lock while maintaining the specified blocking behavior.
@@ -59,21 +39,22 @@ extern "C" {
  * This API call will be blocked for the time specified by @ref
  * CONFIG_BLECTLR_THREADSAFE_BLOCKING_TIMEOUT and then return error code.
  *
+ * @param  timeout		Timeout value for locking API.
+ *
  * @retval 0			Success
  * @retval - ::NRF_EBUSY	Returned without waiting.
  * @retval - ::NRF_EAGAIN	Waiting period timed out.
  */
-int multithreading_lock_acquire(void);
+int32_t multithreading_lock_acquire(int timeout);
 
 /** @brief Try to take the lock and return immediately on failure.
  *
- * This API is useful for use cases where waiting is not desirable (e.g. calling library API
- * from IRQ).
+ * This API is useful for use cases where waiting is not desirable.
  *
  * @retval 0			Success
  * @retval - ::NRF_EBUSY	Returned without waiting.
  */
-int multithreading_lock_acquire_try(void);
+int32_t multithreading_lock_acquire_try(void);
 
 /** @brief Unlock the lock.
  *

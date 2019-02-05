@@ -9,17 +9,16 @@
 /* Semaphore with a single count functioning as a lock. */
 K_SEM_DEFINE(ble_controller_lock, 1, 1);
 
-int multithreading_lock_acquire(void)
+int32_t multithreading_lock_acquire(int32_t timeout)
 {
 #if IS_ENABLED(CONFIG_BLECTLR_THREADSAFE_BLOCKING)
-	return k_sem_take(&ble_controller_lock,
-			  CONFIG_BLECTLR_THREADSAFE_BLOCKING_TIMEOUT);
+	return k_sem_take(&ble_controller_lock, K_MSEC(timeout));
 #else
 	return 0;
 #endif
 }
 
-int multithreading_lock_acquire_try(void)
+int32_t multithreading_lock_acquire_try(void)
 {
 #if IS_ENABLED(CONFIG_BLECTLR_THREADSAFE_BLOCKING)
 	return k_sem_take(&ble_controller_lock, K_NO_WAIT);

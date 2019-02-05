@@ -16,8 +16,11 @@ static int hf_clock_start(struct device *dev, clock_control_subsys_t sub_system)
 {
 	ARG_UNUSED(dev);
 
-	int errcode;
-	THREADSAFE_CALL_WITH_RETCODE(errcode, ble_controller_hf_clock_request(NULL));
+	int errcode = MULTITHREADING_LOCK_ACQUIRE();
+	if (errcode == 0) {
+		errcode = ble_controller_hf_clock_request(NULL);
+		MULTITHREADING_LOCK_RELEASE();
+	}
 	if (errcode != 0) {
 		return -EFAULT;
 	}
@@ -26,9 +29,12 @@ static int hf_clock_start(struct device *dev, clock_control_subsys_t sub_system)
 	if (blocking) {
 		bool is_running = false;
 		while (!is_running) {
-			int errcode;
-			THREADSAFE_CALL_WITH_RETCODE(errcode, ble_controller_hf_clock_is_running(
-				    &is_running));
+			int errcode = MULTITHREADING_LOCK_ACQUIRE();
+			if (errcode == 0) {
+				errcode = ble_controller_hf_clock_is_running(
+					&is_running);
+				MULTITHREADING_LOCK_RELEASE();
+			}
 			if (errcode != 0) {
 				return -EFAULT;
 			}
@@ -43,8 +49,11 @@ static int hf_clock_stop(struct device *dev, clock_control_subsys_t sub_system)
 	ARG_UNUSED(dev);
 	ARG_UNUSED(sub_system);
 
-	int errcode;
-	THREADSAFE_CALL_WITH_RETCODE(errcode, ble_controller_hf_clock_release());
+	int errcode = MULTITHREADING_LOCK_ACQUIRE();
+	if (errcode == 0) {
+		errcode = ble_controller_hf_clock_release();
+		MULTITHREADING_LOCK_RELEASE();
+	}
 	if (errcode != 0) {
 		return -EFAULT;
 	}

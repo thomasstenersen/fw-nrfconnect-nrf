@@ -41,9 +41,11 @@ void blectlr_assertion_handler(const char *const file, const u32_t line)
 
 static int cmd_handle(struct net_buf *cmd)
 {
-	int errcode;
-	THREADSAFE_CALL_WITH_RETCODE(errcode, hci_cmd_put(cmd->data));
-
+	int32_t errcode = MULTITHREADING_LOCK_ACQUIRE();
+	if (!errcode) {
+		errcode = hci_cmd_put(cmd->data);
+		MULTITHREADING_LOCK_RELEASE();
+	}
 	if (errcode) {
 		return -ENOBUFS;
 	}
@@ -56,8 +58,11 @@ static int cmd_handle(struct net_buf *cmd)
 #if defined(CONFIG_BT_CONN)
 static int acl_handle(struct net_buf *acl)
 {
-	int errcode;
-	THREADSAFE_CALL_WITH_RETCODE(errcode, hci_data_put(acl->data));
+	int32_t errcode = MULTITHREADING_LOCK_ACQUIRE();
+	if (!errcode) {
+		errcode = hci_data_put(acl->data);
+		MULTITHREADING_LOCK_RELEASE();
+	}
 	if (errcode) {
 		/* Likely buffer overflow event */
 		k_sem_give(&sem_recv);
@@ -173,15 +178,18 @@ static void recv_thread(void *p1, void *p2, void *p3)
 	ARG_UNUSED(p3);
 
 	static u8_t hci_buffer[256 + 4];
+	int32_t errcode;
 
 	BT_DBG("Started");
 	while (1) {
 		k_sem_take(&sem_recv, K_FOREVER);
 
 		while (1) {
-			int errcode;
-			THREADSAFE_CALL_WITH_RETCODE(errcode, hci_data_get(hci_buffer));
-			if (errcode == 0) {
+			if (!(errcode = MULTITHREADING_LOCK_ACQUIRE())) {
+				errcode = hci_data_get(hci_buffer);
+				MULTITHREADING_LOCK_RELEASE();
+			}
+			if (!errcode) {
 				data_packet_process(hci_buffer);
 			} else {
 				break;
@@ -189,16 +197,16 @@ static void recv_thread(void *p1, void *p2, void *p3)
 		};
 
 		while (1) {
-			int errcode;
-			THREADSAFE_CALL_WITH_RETCODE(
-				errcode, hci_evt_get(hci_buffer));
-			if (errcode == 0) {
+			if (!(errcode = MULTITHREADING_LOCK_ACQUIRE())) {
+				errcode = hci_evt_get(hci_buffer);
+				MULTITHREADING_LOCK_RELEASE();
+			}
+			if (!errcode) {
 				event_packet_process(hci_buffer);
 			} else {
 				break;
 			}
 		};
-
 
 		/* Let other threads of same priority run in between. */
 		k_yield();
@@ -257,9 +265,9 @@ void SIGNALLING_Handler(void)
 	k_sem_give(&sem_signal);
 }
 
-static s32_t ble_init(void)
+static int ble_init(void)
 {
-	s32_t err = 0;
+	int err = 0;
 
 	ble_controller_resource_cfg_t resource_cfg;
 
@@ -269,11 +277,12 @@ static s32_t ble_init(void)
 	resource_cfg.role_cfg.master_count = 1;
 	resource_cfg.role_cfg.slave_count = 1;
 
-	THREADSAFE_CALL_WITH_RETCODE(
-		err, ble_controller_resource_cfg_set(
-			BLE_CONTROLLER_DEFAULT_RESOURCE_CFG_TAG,
-			&resource_cfg));
-
+	err = MULTITHREADING_LOCK_ACQUIRE();
+	if (!err) {
+		err =  ble_controller_resource_cfg_set(BLE_CONTROLLER_DEFAULT_RESOURCE_CFG_TAG,
+		&resource_cfg);
+		MULTITHREADING_LOCK_RELEASE();
+	}
 	if (err < 0 || err > sizeof(ble_controller_mempool)) {
 		return err;
 	}
@@ -320,11 +329,12 @@ static s32_t ble_init(void)
 	clock_cfg.rc_ctiv = BLE_CONTROLLER_RECOMMENDED_RC_CTIV;
 	clock_cfg.rc_temp_ctiv = BLE_CONTROLLER_RECOMMENDED_RC_TEMP_CTIV;
 
-	THREADSAFE_CALL_WITH_RETCODE(
-		err,
-		ble_controller_enable(host_signal, blectlr_assertion_handler,
-				      &clock_cfg, ble_controller_mempool));
-
+	err = MULTITHREADING_LOCK_ACQUIRE();
+	if (!err) {
+		err =  ble_controller_enable(host_signal, blectlr_assertion_handler,
+			&clock_cfg, ble_controller_mempool);
+		MULTITHREADING_LOCK_RELEASE();
+	}
 	if (err < 0) {
 		return err;
 	}
