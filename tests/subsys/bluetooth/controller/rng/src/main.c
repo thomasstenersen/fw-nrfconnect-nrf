@@ -18,6 +18,7 @@
 LOG_MODULE_REGISTER(LOG_MODULE_NAME, LOG_LEVEL_DBG);
 
 #define SEM_GIVE_ERROR (-0xFF)
+#define RANDOM_POOL_CAPACITY (100)
 
 /* The ble controller poll length is limited to UINT8_MAX. This should be
  * more than uint8_t to ensure it fills the whole buffer. */
@@ -53,11 +54,17 @@ void ble_controller_RNG_IRQHandler(void)
 
 int32_t ble_controller_rand_pool_capacity_get(uint8_t *p_pool_capacity)
 {
+	zassert_not_null(p_pool_capacity, "NULL pointer argument provided");
+
+	*p_pool_capacity = RANDOM_POOL_CAPACITY;
+	return 0;
+}
+
+uint8_t ble_controller_rand_pool_available_get(void)
+{
 	mock_check_expected();
 
-	mock_arg_get(*p_pool_capacity);
-
-	return (int32_t)ztest_get_return_value();
+	return (uint8_t)ztest_get_return_value();
 }
 
 int32_t ble_controller_rand_vector_get(uint8_t *p_dst, uint8_t length)
@@ -98,14 +105,14 @@ static void rand_pool_fill(uint8_t *p_rand_pool, uint16_t length)
 	shift++;
 }
 
-static void capacity_get_expect(uint8_t capacity, int32_t return_value)
+static void available_get_expect(uint8_t bytes_available)
 {
-	mock_expect(ble_controller_rand_pool_capacity_get);
-	mock_arg(ble_controller_rand_pool_capacity_get, capacity);
-	ztest_returns_value(ble_controller_rand_pool_capacity_get, return_value);
+	mock_expect(ble_controller_rand_pool_available_get);
+
+	ztest_returns_value(ble_controller_rand_pool_available_get, bytes_available);
 }
 
-static void prio_low_vector_get_expect(uint8_t *p_dst, uint8_t length,
+static void vector_get_expect(uint8_t *p_dst, uint8_t length,
 				       uint8_t *p_rand_pool, uint8_t rand_pool_length,
 				       int return_value)
 {
@@ -119,7 +126,7 @@ static void prio_low_vector_get_expect(uint8_t *p_dst, uint8_t length,
 	ztest_returns_value(ble_controller_rand_vector_get, return_value);
 }
 
-static void prio_low_vector_get_blocking_expect(uint8_t *p_dst, uint8_t length,
+static void vector_get_blocking_expect(uint8_t *p_dst, uint8_t length,
 						uint8_t *p_rand_pool, uint8_t rand_pool_length)
 {
 	mock_expect(ble_controller_rand_vector_get_blocking);
@@ -151,14 +158,8 @@ void test_error_cases(void)
 
 	zassert_equal_ptr(rng_driver_get(), dev, "Wrong pointer");
 
-	capacity_get_expect(100, -1);
-	zassert_equal(entropy_get_entropy(dev, buffer, 64), -EINVAL, "Wrong error returned");
-
-	capacity_get_expect(100, -1);
-	zassert_equal(entropy_get_entropy_isr(dev, buffer, 64, 0), -EINVAL, "Wrong error code returned");
-
-	capacity_get_expect(100, 0);
-	prio_low_vector_get_expect(buffer, 64, NULL, 0, -1);
+	available_get_expect(64);
+	vector_get_expect(buffer, 64, NULL, 0, -1);
 	zassert_equal(entropy_get_entropy_isr(dev, buffer, 64, 0), -EINVAL, "Failed to get rand vector");
 }
 
@@ -168,13 +169,15 @@ void test_thread_mode_entropy_less_than_capacity(void)
 
 	memset(buffer, 0, sizeof(buffer));
 
-	rand_pool_fill(rand_pool, 64);
+	rand_pool_fill(rand_pool, RANDOM_POOL_CAPACITY - 1);
 
 	/* Request vector of randoms that lesser than the pool capacity. */
-	capacity_get_expect(100, 0);
-	prio_low_vector_get_expect(buffer, 64, rand_pool, 64, 0);
-	zassert_equal(entropy_get_entropy(dev, buffer, 64), 0, "Failed to get rand vector");
-	zassert_false(memcmp(buffer, rand_pool, 64), "Rand data mismatch");
+	vector_get_expect(buffer, RANDOM_POOL_CAPACITY - 1,
+					  rand_pool, RANDOM_POOL_CAPACITY - 1, 0);
+	zassert_equal(entropy_get_entropy(dev, buffer, RANDOM_POOL_CAPACITY - 1), 0,
+				  "Failed to get rand vector");
+	zassert_false(memcmp(buffer, rand_pool, RANDOM_POOL_CAPACITY - 1),
+				  "Rand data mismatch");
 }
 
 void test_thread_mode_entropy_greater_than_capacity(void)
@@ -186,13 +189,16 @@ void test_thread_mode_entropy_greater_than_capacity(void)
 	rand_pool_fill(rand_pool, BUFFER_LENGTH);
 
 	/* Request vector of randoms that bigger than the pool capacity. */
-	capacity_get_expect(100, 0);
-	for (size_t i = 0; i < BUFFER_LENGTH / 100; i++) {
-		prio_low_vector_get_expect(&buffer[i * 100], 100, &rand_pool[i * 100], 100, 0);
+	for (size_t i = 0; i < BUFFER_LENGTH / RANDOM_POOL_CAPACITY; i++) {
+		vector_get_expect(&buffer[i * RANDOM_POOL_CAPACITY], RANDOM_POOL_CAPACITY,
+				&rand_pool[i * RANDOM_POOL_CAPACITY], RANDOM_POOL_CAPACITY, 0);
 	}
-	prio_low_vector_get_expect(&buffer[BUFFER_LENGTH - BUFFER_LENGTH % 100], BUFFER_LENGTH % 100,
-			      &rand_pool[BUFFER_LENGTH - BUFFER_LENGTH % 100], BUFFER_LENGTH % 100, 0);
-	zassert_equal(entropy_get_entropy(dev, buffer, BUFFER_LENGTH), 0, "Failed to get rand vector");
+
+	uint8_t bytes_left = BUFFER_LENGTH % RANDOM_POOL_CAPACITY;
+	vector_get_expect(&buffer[BUFFER_LENGTH - bytes_left], bytes_left,
+				  &rand_pool[BUFFER_LENGTH - bytes_left], bytes_left, 0);
+	zassert_equal(entropy_get_entropy(dev, buffer, BUFFER_LENGTH), 0,
+				  "Failed to get rand vector");
 	zassert_false(memcmp(buffer, rand_pool, BUFFER_LENGTH), "Rand data mismatch");
 }
 
@@ -206,9 +212,8 @@ void test_thread_mode_not_enough_bytes(void)
 
 	/* Simulate the case when the entropy_get_entropy() call gets blocked until
 	 * more bytes generated . */
-	capacity_get_expect(100, 0);
-	prio_low_vector_get_expect(buffer, 64, rand_pool, 64, SEM_GIVE_ERROR);
-	prio_low_vector_get_expect(buffer, 64, rand_pool, 64, 0);
+	vector_get_expect(buffer, 64, rand_pool, 64, SEM_GIVE_ERROR);
+	vector_get_expect(buffer, 64, rand_pool, 64, 0);
 	zassert_equal(entropy_get_entropy(dev, buffer, 64), 0, "Failed to get rand vector");
 	zassert_false(memcmp(buffer, rand_pool, 64), "Rand data mismatch");
 }
@@ -219,13 +224,13 @@ void test_isr_mode_no_wait_less_than_capacity(void)
 
 	memset(buffer, 0, sizeof(buffer));
 
-	rand_pool_fill(rand_pool, 64);
+	rand_pool_fill(rand_pool, 32);
 
 	/* Request vector of randoms that lesser than the pool capacity. */
-	capacity_get_expect(100, 0);
-	prio_low_vector_get_expect(buffer, 64, rand_pool, 64, 0);
-	zassert_equal(entropy_get_entropy_isr(dev, buffer, 64, 0), 64, "Failed to get rand vector");
-	zassert_false(memcmp(buffer, rand_pool, 64), "Rand data mismatch");
+	available_get_expect(32);
+	vector_get_expect(buffer, 32, rand_pool, 32, 0);
+	zassert_equal(entropy_get_entropy_isr(dev, buffer, 64, 0), 32, "Failed to get rand vector");
+	zassert_false(memcmp(buffer, rand_pool, 32), "Rand data mismatch");
 }
 
 void test_isr_mode_no_wait_greater_than_capacity(void)
@@ -234,43 +239,46 @@ void test_isr_mode_no_wait_greater_than_capacity(void)
 
 	memset(buffer, 0, sizeof(buffer));
 
+	rand_pool_fill(rand_pool, RANDOM_POOL_CAPACITY);
+
 	/* Request vector of randoms that greater than the pool capacity. */
-	capacity_get_expect(100, 0);
-	prio_low_vector_get_expect(buffer, 100, rand_pool, 100, 0);
-	zassert_equal(entropy_get_entropy_isr(dev, buffer, 200, 0), 100, "Failed to get rand vector");
-	zassert_false(memcmp(buffer, rand_pool, 100), "Rand data mismatch");
+	available_get_expect(RANDOM_POOL_CAPACITY);
+	vector_get_expect(buffer, RANDOM_POOL_CAPACITY, rand_pool, RANDOM_POOL_CAPACITY, 0);
+	zassert_equal(entropy_get_entropy_isr(dev, buffer, 200, 0), RANDOM_POOL_CAPACITY, "Failed to get rand vector");
+	zassert_false(memcmp(buffer, rand_pool, RANDOM_POOL_CAPACITY), "Rand data mismatch");
 }
 
 void test_isr_mode_busywait_less_than_capacity()
 {
 	struct device *dev = device_get_binding(CONFIG_ENTROPY_NAME);
-
 	memset(buffer, 0, sizeof(buffer));
 
+	rand_pool_fill(rand_pool, RANDOM_POOL_CAPACITY - 1);
+
 	/* Request vector of randoms that lesser than the pool capacity. */
-	capacity_get_expect(100, 0);
-	prio_low_vector_get_blocking_expect(buffer, 64, rand_pool, 64);
-	zassert_equal(entropy_get_entropy_isr(dev, buffer, 64, ENTROPY_BUSYWAIT), 64, "Failed to get rand vector");
-	zassert_false(memcmp(buffer, rand_pool, 64), "Rand data mismatch");
+	vector_get_blocking_expect(buffer, RANDOM_POOL_CAPACITY - 1, rand_pool, RANDOM_POOL_CAPACITY - 1);
+	zassert_equal(entropy_get_entropy_isr(dev, buffer, RANDOM_POOL_CAPACITY - 1, ENTROPY_BUSYWAIT), RANDOM_POOL_CAPACITY - 1, "Failed to get rand vector");
+	zassert_false(memcmp(buffer, rand_pool, RANDOM_POOL_CAPACITY - 1), "Rand data mismatch");
 }
 
 void test_isr_mode_busywait_greater_than_capacity()
 {
 	struct device *dev = device_get_binding(CONFIG_ENTROPY_NAME);
-
 	memset(buffer, 0, sizeof(buffer));
 
 	rand_pool_fill(rand_pool, BUFFER_LENGTH);
 
 	/* Request vector of randoms that greater than the pool capacity. */
-	capacity_get_expect(100, 0);
-	for (size_t i = 0; i < BUFFER_LENGTH / 100; i++) {
-		prio_low_vector_get_blocking_expect(&buffer[i * 100], 100,
-						    &rand_pool[i * 100], 100);
+	for (size_t i = 0; i < BUFFER_LENGTH / RANDOM_POOL_CAPACITY; i++) {
+		vector_get_blocking_expect(&buffer[i * RANDOM_POOL_CAPACITY], RANDOM_POOL_CAPACITY,
+							&rand_pool[i * RANDOM_POOL_CAPACITY], RANDOM_POOL_CAPACITY);
 	}
-	prio_low_vector_get_blocking_expect(&buffer[BUFFER_LENGTH - BUFFER_LENGTH % 100], BUFFER_LENGTH % 100,
-					    &rand_pool[BUFFER_LENGTH - BUFFER_LENGTH % 100], BUFFER_LENGTH % 100);
-	zassert_equal(entropy_get_entropy_isr(dev, buffer, BUFFER_LENGTH, ENTROPY_BUSYWAIT), BUFFER_LENGTH, "Failed to get rand vector");
+
+	uint8_t bytes_left = BUFFER_LENGTH % RANDOM_POOL_CAPACITY;
+	vector_get_blocking_expect(&buffer[BUFFER_LENGTH - bytes_left], bytes_left,
+						&rand_pool[BUFFER_LENGTH - bytes_left], bytes_left);
+	zassert_equal(entropy_get_entropy_isr(dev, buffer, BUFFER_LENGTH, ENTROPY_BUSYWAIT),
+				  BUFFER_LENGTH, "Failed to get rand vector");
 	zassert_false(memcmp(buffer, rand_pool, BUFFER_LENGTH), "Rand data mismatch");
 }
 

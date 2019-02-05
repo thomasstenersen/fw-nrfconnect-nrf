@@ -20,6 +20,7 @@
 struct rng_driver_data {
 	struct k_sem sem_sync; /* Used to fill the pending client buffer with new
 	                        * random values after RNG IRQ is triggered. */
+	uint8_t pool_capacity;
 };
 
 static struct rng_driver_data rng_data;
@@ -28,14 +29,9 @@ static int rng_driver_get_entropy(struct device *dev, u8_t *buf, u16_t len)
 {
 	__ASSERT_NO_MSG(&rng_data == DEV_DATA(dev));
 
-	uint8_t pool_capacity;
-	if (ble_controller_rand_pool_capacity_get(&pool_capacity) != 0) {
-		return -EINVAL;
-	}
-
 	u16_t bread;
 	while (len > 0) {
-		bread = min(len, (u16_t)pool_capacity);
+		bread = min(len, (u16_t)rng_data.pool_capacity);
 
 		__ASSERT_NO_MSG(bread <= (uint8_t)(-1));
 
@@ -57,24 +53,16 @@ static int rng_driver_get_entropy_isr(struct device *dev, u8_t *buf, u16_t len,
 {
 	__ASSERT_NO_MSG(&rng_data == DEV_DATA(dev));
 
-	u16_t bread;
-	uint8_t pool_capacity;
-	if (ble_controller_rand_pool_capacity_get(&pool_capacity) != 0) {
-		return -EINVAL;
-	}
-
 	if (likely((flags & ENTROPY_BUSYWAIT) == 0)) {
-		bread = min(len, (u16_t)pool_capacity);
-
-		__ASSERT_NO_MSG(bread <= (uint8_t)(-1));
-
-		int32_t errcode = ble_controller_rand_vector_get(buf, (uint8_t) bread);
-		return errcode == 0 ? bread : -EINVAL;
+		uint8_t bytes_available = ble_controller_rand_pool_available_get();
+		int32_t errcode = ble_controller_rand_vector_get(buf, bytes_available);
+		return errcode == 0 ? bytes_available : -EINVAL;
 	}
 
+	u16_t bread;
 	u16_t bleft = len;
 	while (bleft > 0) {
-		bread = min(bleft, (u16_t)pool_capacity);
+		bread = min(bleft, (u16_t)rng_data.pool_capacity);
 
 		__ASSERT_NO_MSG(bread <= (uint8_t)(-1));
 
@@ -103,6 +91,10 @@ static int rng_driver_init(struct device *dev)
 	ARG_UNUSED(dev);
 
 	k_sem_init(&rng_data.sem_sync, 0, 1);
+
+	if (ble_controller_rand_pool_capacity_get(&rng_data.pool_capacity) != 0) {
+		__ASSERT_NO_MSG(false);
+	}
 
 	IRQ_CONNECT(NRF5_IRQ_RNG_IRQn, CONFIG_ENTROPY_NRF5_PRI, rng_driver_isr, NULL, 0);
 
