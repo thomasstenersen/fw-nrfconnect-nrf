@@ -25,7 +25,7 @@ int bt_rand(void *buf, size_t len)
 		return -NRF_EINVAL;
 	}
 
-	int errcode = MULTITHREADING_LOCK_ACQUIRE();
+	int32_t errcode = MULTITHREADING_LOCK_ACQUIRE();
 	if (!errcode) {
 		errcode = ble_controller_rand_vector_get(buf, (uint8_t)len);
 		MULTITHREADING_LOCK_RELEASE();
@@ -42,7 +42,7 @@ int bt_encrypt_le(const u8_t key[16], const u8_t plaintext[16],
 	LOG_HEXDUMP_DBG(key, 16, "key");
 	LOG_HEXDUMP_DBG(plaintext, 16, "plaintext");
 
-	int errcode = MULTITHREADING_LOCK_ACQUIRE();
+	int32_t errcode = MULTITHREADING_LOCK_ACQUIRE();
 	if (!errcode) {
 		errcode = ble_controller_ecb_block_encrypt(key, plaintext, enc_data);
 		MULTITHREADING_LOCK_RELEASE();
@@ -64,7 +64,7 @@ int bt_encrypt_be(const u8_t key[16], const u8_t plaintext[16],
 	sys_memcpy_swap(key_le, key, 16);
 	sys_memcpy_swap(plaintext_le, plaintext, 16);
 
-	int errcode = MULTITHREADING_LOCK_ACQUIRE();
+	int32_t errcode = MULTITHREADING_LOCK_ACQUIRE();
 	if (!errcode) {
 		errcode = ble_controller_ecb_block_encrypt(key_le, plaintext_le, enc_data_le);
 		MULTITHREADING_LOCK_RELEASE();

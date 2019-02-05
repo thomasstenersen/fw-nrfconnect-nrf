@@ -75,7 +75,7 @@ static int acl_handle(struct net_buf *acl)
 
 static int hci_driver_send(struct net_buf *buf)
 {
-	int err;
+	int32_t  err;
 	u8_t type;
 
 	BT_DBG("Enter");
@@ -267,7 +267,7 @@ void SIGNALLING_Handler(void)
 
 static int ble_init(void)
 {
-	int err = 0;
+	int32_t err = 0;
 
 	ble_controller_resource_cfg_t resource_cfg;
 
@@ -348,7 +348,7 @@ static int hci_driver_init(struct device *unused)
 
 	bt_hci_driver_register(&drv);
 
-	s32_t err = 0;
+	int32_t  err = 0;
 
 	err = ble_init();
 
