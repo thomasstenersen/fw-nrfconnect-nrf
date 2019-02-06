@@ -32,13 +32,10 @@ static int rng_driver_get_entropy(struct device *dev, u8_t *buf, u16_t len)
 	u16_t bytes_left = len;
 	while (bytes_left > 0) {
 		int32_t bytes_red;
-		bytes_red = ble_controller_rand_vector_get(p_dst, bytes_left);
-		while (bytes_red <= 0) {
+		while ((bytes_red = ble_controller_rand_vector_get(p_dst, bytes_left)) <= 0) {
 			/* Put the thread on wait until next interrupt to get more
 			 * random values. */
 			k_sem_take(&rng_data.sem_sync, K_FOREVER);
-
-			bytes_red = ble_controller_rand_vector_get(p_dst, bytes_left);
 		}
 
 		p_dst += bytes_red;
@@ -54,8 +51,7 @@ static int rng_driver_get_entropy_isr(struct device *dev, u8_t *buf, u16_t len,
 	__ASSERT_NO_MSG(&rng_data == DEV_DATA(dev));
 
 	if (likely((flags & ENTROPY_BUSYWAIT) == 0)) {
-		int32_t errcode = ble_controller_rand_vector_get(buf, len);
-		return errcode < 0 ? -EINVAL : errcode;
+		return ble_controller_rand_vector_get(buf, len);
 	}
 
 	ble_controller_rand_vector_get_blocking(buf, len);

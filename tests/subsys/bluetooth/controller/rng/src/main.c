@@ -17,8 +17,6 @@
 #define LOG_MODULE_NAME test_ble_controller_rng
 LOG_MODULE_REGISTER(LOG_MODULE_NAME, LOG_LEVEL_DBG);
 
-#define SEM_GIVE_ERROR (-0xFF)
-
 /* The ble controller poll length is limited to UINT8_MAX. This should be
  * more than uint8_t to ensure it fills the whole buffer. */
 #define BUFFER_LENGTH 1024
@@ -51,7 +49,7 @@ void ble_controller_RNG_IRQHandler(void)
 	/* Stub */
 }
 
-int32_t ble_controller_rand_vector_get(uint8_t *p_dst, uint16_t length)
+uint32_t ble_controller_rand_vector_get(uint8_t *p_dst, uint16_t length)
 {
 	mock_check_expected();
 
@@ -60,7 +58,7 @@ int32_t ble_controller_rand_vector_get(uint8_t *p_dst, uint16_t length)
 
 	rand_pool_to_buffer_copy(p_dst, length);
 
-	int32_t retval = (int32_t)ztest_get_return_value();
+	uint32_t retval = (uint32_t)ztest_get_return_value();
 	if (retval < length) {
 		k_sem_give(rng_driver_sema_sync_get());
 	}
@@ -137,18 +135,16 @@ void test_error_cases(void)
 	struct device *dev = device_get_binding(CONFIG_ENTROPY_NAME);
 
 	zassert_not_null(dev, "Device is null");
-
 	zassert_equal_ptr(rng_driver_get(), dev, "Wrong pointer");
 
-	vector_get_expect(buffer, 64, NULL, 0, -1);
-	zassert_equal(entropy_get_entropy_isr(dev, buffer, 64, 0), -EINVAL, "Failed to get rand vector");
+	vector_get_expect(buffer, 64, NULL, 0, 0);
+	zassert_equal(entropy_get_entropy_isr(dev, buffer, 64, 0), 0, "Failed to get rand vector");
 }
 
 void test_thread_mode_entropy_return_what_was_requested(void)
 {
 	struct device *dev = device_get_binding(CONFIG_ENTROPY_NAME);
 
-	/* ble_controller_rand_vector_get() returns less than requested. */
 	vector_get_expect(buffer, 100, rand_pool, 100, 100);
 	zassert_equal(entropy_get_entropy(dev, buffer, 100), 0,
 				  "Failed to get rand vector");
@@ -160,7 +156,6 @@ void test_thread_mode_entropy_return_less_than_requested(void)
 {
 	struct device *dev = device_get_binding(CONFIG_ENTROPY_NAME);
 
-	/* Request vector of randoms that bigger than the pool capacity. */
 	for (size_t i = 0; i < 10; i++) {
 		vector_get_expect(&buffer[i * 10], (100 - (i * 10)), &rand_pool[i * 10], 10, 10);
 	}
@@ -170,13 +165,11 @@ void test_thread_mode_entropy_return_less_than_requested(void)
 	zassert_false(memcmp(buffer, rand_pool, 100), "Rand data mismatch");
 }
 
-void test_thread_mode_return_error(void)
+void test_thread_mode_return_zero(void)
 {
 	struct device *dev = device_get_binding(CONFIG_ENTROPY_NAME);
 
-	/* Simulate the case when the entropy_get_entropy() call gets blocked until
-	 * more bytes generated . */
-	vector_get_expect(buffer, 100, rand_pool, 0, -1);
+	vector_get_expect(buffer, 100, rand_pool, 0, 0);
 	vector_get_expect(buffer, 100, rand_pool, 100, 100);
 	zassert_equal(entropy_get_entropy(dev, buffer, 100), 0, "Failed to get rand vector");
 	zassert_false(memcmp(buffer, rand_pool, 100), "Rand data mismatch");
@@ -192,20 +185,18 @@ void test_isr_mode_no_wait_return_success(void)
 	zassert_false(memcmp(buffer, rand_pool, 20), "Rand data mismatch");
 }
 
-void test_isr_mode_no_wait_return_error(void)
+void test_isr_mode_no_wait_return_zero(void)
 {
 	struct device *dev = device_get_binding(CONFIG_ENTROPY_NAME);
 
-	/* Request vector of randoms that greater than the pool capacity. */
-	vector_get_expect(buffer, 100, rand_pool, 0, -1);
-	zassert_equal(entropy_get_entropy_isr(dev, buffer, 100, 0), -EINVAL, "Failed to get rand vector");
+	vector_get_expect(buffer, 100, rand_pool, 0, 0);
+	zassert_equal(entropy_get_entropy_isr(dev, buffer, 100, 0), 0, "Failed to get rand vector");
 }
 
 void test_isr_mode_busywait()
 {
 	struct device *dev = device_get_binding(CONFIG_ENTROPY_NAME);
 
-	/* Request vector of randoms that lesser than the pool capacity. */
 	vector_get_blocking_expect(buffer, 100, rand_pool, 100);
 	zassert_equal(entropy_get_entropy_isr(dev, buffer, 100, ENTROPY_BUSYWAIT), 100, "Failed to get rand vector");
 	zassert_false(memcmp(buffer, rand_pool, 100), "Rand data mismatch");
@@ -219,9 +210,9 @@ void test_main(void)
 			 ztest_unit_test_setup_teardown(test_error_cases, unit_test_setup, unit_test_noop),
 			 ztest_unit_test_setup_teardown(test_thread_mode_entropy_return_what_was_requested, unit_test_setup, unit_test_noop),
 			 ztest_unit_test_setup_teardown(test_thread_mode_entropy_return_less_than_requested, unit_test_setup, unit_test_noop),
-			 ztest_unit_test_setup_teardown(test_thread_mode_return_error, unit_test_setup, unit_test_noop),
+			 ztest_unit_test_setup_teardown(test_thread_mode_return_zero, unit_test_setup, unit_test_noop),
 			 ztest_unit_test_setup_teardown(test_isr_mode_no_wait_return_success, unit_test_setup, unit_test_noop),
-			 ztest_unit_test_setup_teardown(test_isr_mode_no_wait_return_error, unit_test_setup, unit_test_noop),
+			 ztest_unit_test_setup_teardown(test_isr_mode_no_wait_return_zero, unit_test_setup, unit_test_noop),
 			 ztest_unit_test_setup_teardown(test_isr_mode_busywait, unit_test_setup, unit_test_noop));
 	ztest_run_test_suite(test_ble_controller_rng);
 }
