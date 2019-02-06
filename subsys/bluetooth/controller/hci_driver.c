@@ -17,14 +17,14 @@
 #define LOG_MODULE_NAME bt_ctlr_hci_driver
 #include "common/log.h"
 
-
 static K_SEM_DEFINE(sem_recv, 0, UINT_MAX);
 static K_SEM_DEFINE(sem_signal, 0, UINT_MAX);
 
 static struct k_thread recv_thread_data;
 static struct k_thread signal_thread_data;
 static K_THREAD_STACK_DEFINE(recv_thread_stack, CONFIG_BLECTLR_RX_STACK_SIZE);
-static K_THREAD_STACK_DEFINE(signal_thread_stack, CONFIG_BLECTLR_SIGNAL_STACK_SIZE);
+static K_THREAD_STACK_DEFINE(signal_thread_stack,
+			     CONFIG_BLECTLR_SIGNAL_STACK_SIZE);
 
 static uint8_t ble_controller_mempool[0x6000];
 
@@ -81,7 +81,7 @@ static int hci_driver_send(struct net_buf *buf)
 		BT_DBG("ACL_OUT");
 		err = acl_handle(buf);
 		break;
-#endif          /* CONFIG_BT_CONN */
+#endif /* CONFIG_BT_CONN */
 	case BT_BUF_CMD:
 		BT_DBG("CMD");
 		err = cmd_handle(buf);
@@ -241,19 +241,6 @@ static int32_t ble_init(void)
 {
 	int32_t err = 0;
 
-	ble_controller_resource_cfg_t resource_cfg;
-
-	resource_cfg.buffer_cfg.rx_packet_size = 251;
-	resource_cfg.buffer_cfg.tx_packet_size = 251;
-	resource_cfg.conn_event_cfg.event_length_us = 50000;
-	resource_cfg.role_cfg.master_count = 1;
-	resource_cfg.role_cfg.slave_count = 1;
-
-	err = ble_controller_resource_cfg_set(BLE_CONTROLLER_DEFAULT_RESOURCE_CFG_TAG, &resource_cfg);
-	if (err < 0 || err > sizeof(ble_controller_mempool)) {
-		return err;
-	}
-
 	nrf_lf_clock_cfg_t clock_cfg;
 
 #ifdef CONFIG_CLOCK_CONTROL_NRF5_K32SRC_RC
@@ -296,14 +283,32 @@ static int32_t ble_init(void)
 	clock_cfg.rc_ctiv = BLE_CONTROLLER_RECOMMENDED_RC_CTIV;
 	clock_cfg.rc_temp_ctiv = BLE_CONTROLLER_RECOMMENDED_RC_TEMP_CTIV;
 
-	err = ble_controller_enable(host_signal, blectlr_assertion_handler, &clock_cfg, ble_controller_mempool);
+	err = ble_controller_init(blectlr_assertion_handler, &clock_cfg);
+	if (err < 0) {
+		return err;
+	}
+
+	ble_controller_resource_cfg_t resource_cfg;
+
+	resource_cfg.buffer_cfg.rx_packet_size = 251;
+	resource_cfg.buffer_cfg.tx_packet_size = 251;
+	resource_cfg.conn_event_cfg.event_length_us = 50000;
+	resource_cfg.role_cfg.master_count = 1;
+	resource_cfg.role_cfg.slave_count = 1;
+
+	err = ble_controller_resource_cfg_set(
+		BLE_CONTROLLER_DEFAULT_RESOURCE_CFG_TAG, &resource_cfg);
+	if (err < 0 || err > sizeof(ble_controller_mempool)) {
+		return err;
+	}
+
+	err = ble_controller_enable(host_signal, ble_controller_mempool);
 	if (err < 0) {
 		return err;
 	}
 
 	return 0;
 }
-
 
 static int hci_driver_init(struct device *unused)
 {
@@ -323,9 +328,11 @@ static int hci_driver_init(struct device *unused)
 	IRQ_DIRECT_CONNECT(NRF5_IRQ_TIMER0_IRQn, 0,
 			   ble_controller_TIMER0_IRQHandler, IRQ_ZERO_LATENCY);
 	IRQ_CONNECT(NRF5_IRQ_SWI5_IRQn, 4, SIGNALLING_Handler, NULL, 0);
-	IRQ_CONNECT(NRF5_IRQ_RNG_IRQn, 4, ble_controller_RNG_IRQHandler, NULL, 0);
+	IRQ_CONNECT(NRF5_IRQ_RNG_IRQn, 4, ble_controller_RNG_IRQHandler, NULL,
+		    0);
 	IRQ_DIRECT_CONNECT(NRF5_IRQ_POWER_CLOCK_IRQn, 0,
-			   ble_controller_POWER_CLOCK_IRQHandler, IRQ_ZERO_LATENCY);
+			   ble_controller_POWER_CLOCK_IRQHandler,
+			   IRQ_ZERO_LATENCY);
 
 	return 0;
 }
