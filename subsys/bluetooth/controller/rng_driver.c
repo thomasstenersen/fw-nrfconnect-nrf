@@ -31,15 +31,15 @@ static int rng_driver_get_entropy(struct device *dev, u8_t *buf, u16_t len)
 	u8_t *p_dst = buf;
 	u16_t bytes_left = len;
 	while (bytes_left > 0) {
-		int32_t bytes_red;
-		while ((bytes_red = ble_controller_rand_vector_get(p_dst, bytes_left)) <= 0) {
+		int32_t bytes_read;
+		while ((bytes_read = ble_controller_rand_vector_get(p_dst, bytes_left)) <= 0) {
 			/* Put the thread on wait until next interrupt to get more
 			 * random values. */
 			k_sem_take(&rng_data.sem_sync, K_FOREVER);
 		}
 
-		p_dst += bytes_red;
-		bytes_left -= bytes_red;
+		p_dst += bytes_read;
+		bytes_left -= bytes_read;
 	}
 
 	return 0;

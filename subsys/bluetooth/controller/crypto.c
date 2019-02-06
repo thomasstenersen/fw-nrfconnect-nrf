@@ -27,17 +27,18 @@ int bt_rand(void *buf, size_t len)
 	}
 
 	u8_t *buf8 = buf;
+	size_t bytes_left = len;
 
-	while (len) {
+	while (bytes_left) {
 		u32_t v = sys_rand32_get();
 
-		if (len >= sizeof(v)) {
+		if (bytes_left >= sizeof(v)) {
 			memcpy(buf8, &v, sizeof(v));
 
 			buf8 += sizeof(v);
-			len -= sizeof(v);
+			bytes_left -= sizeof(v);
 		} else {
-			memcpy(buf8, &v, len);
+			memcpy(buf8, &v, bytes_left);
 			break;
 		}
 	}
