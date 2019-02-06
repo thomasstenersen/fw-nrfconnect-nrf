@@ -11,9 +11,7 @@
 #include <soc.h>
 #include <logging/log.h>
 
-#include <ble_controller_soc.h>
-
-#include "nrf_error.h"
+#include "nrf_errno.h"
 #include "multithreading_lock.h"
 
 #define LOG_MODULE_NAME ble_controller_crypto
@@ -25,15 +23,24 @@ int bt_rand(void *buf, size_t len)
 		return -NRF_EINVAL;
 	}
 
-	int32_t errcode = MULTITHREADING_LOCK_ACQUIRE();
-	if (!errcode) {
-		errcode = ble_controller_rand_vector_get(buf, (uint8_t)len);
-		MULTITHREADING_LOCK_RELEASE();
+	u8_t *buf8 = buf;
+	size_t bytes_left = len;
+
+	while (bytes_left) {
+		u32_t v = sys_rand32_get();
+
+		if (bytes_left >= sizeof(v)) {
+			memcpy(buf8, &v, sizeof(v));
+
+			buf8 += sizeof(v);
+			bytes_left -= sizeof(v);
+		} else {
+			memcpy(buf8, &v, bytes_left);
+			break;
+		}
 	}
 
-	LOG_INF("rand bytes %d\n", errcode);
-
-	return errcode;
+	return 0;
 }
 
 int bt_encrypt_le(const u8_t key[16], const u8_t plaintext[16],

@@ -279,12 +279,7 @@ static int ble_init(void)
 	resource_cfg.role_cfg.master_count = 1;
 	resource_cfg.role_cfg.slave_count = 1;
 
-	err = MULTITHREADING_LOCK_ACQUIRE();
-	if (!err) {
-		err =  ble_controller_resource_cfg_set(BLE_CONTROLLER_DEFAULT_RESOURCE_CFG_TAG,
-		&resource_cfg);
-		MULTITHREADING_LOCK_RELEASE();
-	}
+	err = ble_controller_resource_cfg_set(BLE_CONTROLLER_DEFAULT_RESOURCE_CFG_TAG, &resource_cfg);
 	if (err < 0 || err > sizeof(ble_controller_mempool)) {
 		return err;
 	}
@@ -333,6 +328,33 @@ static int ble_init(void)
 
 	err = MULTITHREADING_LOCK_ACQUIRE();
 	if (!err) {
+		err = ble_controller_init(blectlr_assertion_handler, &clock_cfg);
+		MULTITHREADING_LOCK_RELEASE();
+	}
+	if (err < 0) {
+		return err;
+	}
+
+	ble_controller_resource_cfg_t resource_cfg;
+
+	resource_cfg.buffer_cfg.rx_packet_size = 251;
+	resource_cfg.buffer_cfg.tx_packet_size = 251;
+	resource_cfg.conn_event_cfg.event_length_us = 50000;
+	resource_cfg.role_cfg.master_count = 1;
+	resource_cfg.role_cfg.slave_count = 1;
+
+	err = MULTITHREADING_LOCK_ACQUIRE();
+	if (!err) {
+		err = ble_controller_resource_cfg_set(
+			BLE_CONTROLLER_DEFAULT_RESOURCE_CFG_TAG, &resource_cfg);
+		MULTITHREADING_LOCK_RELEASE();
+	}
+	if (err < 0 || err > sizeof(ble_controller_mempool)) {
+		return err;
+	}
+
+	err = MULTITHREADING_LOCK_ACQUIRE();
+	if (!err) {
 		err =  ble_controller_enable(host_signal, blectlr_assertion_handler,
 			&clock_cfg, ble_controller_mempool);
 		MULTITHREADING_LOCK_RELEASE();
@@ -365,8 +387,7 @@ static int hci_driver_init(struct device *unused)
 	IRQ_DIRECT_CONNECT(NRF5_IRQ_TIMER0_IRQn, 0,
 			   ble_controller_TIMER0_IRQHandler, IRQ_ZERO_LATENCY);
 	IRQ_CONNECT(NRF5_IRQ_SWI5_IRQn, 4, SIGNALLING_Handler, NULL, 0);
-	IRQ_CONNECT(NRF5_IRQ_RNG_IRQn, 4, ble_controller_RNG_IRQHandler, NULL,
-		    0);
+	IRQ_CONNECT(NRF5_IRQ_RNG_IRQn, 4, ble_controller_RNG_IRQHandler, NULL, 0);
 	IRQ_DIRECT_CONNECT(NRF5_IRQ_POWER_CLOCK_IRQn, 0,
 			   ble_controller_POWER_CLOCK_IRQHandler,
 			   IRQ_ZERO_LATENCY);
