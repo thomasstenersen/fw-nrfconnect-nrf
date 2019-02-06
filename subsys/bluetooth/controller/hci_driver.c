@@ -373,7 +373,6 @@ static int hci_driver_init(struct device *unused)
 	IRQ_DIRECT_CONNECT(NRF5_IRQ_TIMER0_IRQn, 0,
 			   ble_controller_TIMER0_IRQHandler, IRQ_ZERO_LATENCY);
 	IRQ_CONNECT(NRF5_IRQ_SWI5_IRQn, 4, SIGNALLING_Handler, NULL, 0);
-	IRQ_CONNECT(NRF5_IRQ_RNG_IRQn, 4, ble_controller_RNG_IRQHandler, NULL, 0);
 	IRQ_DIRECT_CONNECT(NRF5_IRQ_POWER_CLOCK_IRQn, 0,
 			   ble_controller_POWER_CLOCK_IRQHandler,
 			   IRQ_ZERO_LATENCY);
