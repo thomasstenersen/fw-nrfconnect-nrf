@@ -185,7 +185,8 @@ static void recv_thread(void *p1, void *p2, void *p3)
 		k_sem_take(&sem_recv, K_FOREVER);
 
 		while (1) {
-			if (!(errcode = MULTITHREADING_LOCK_ACQUIRE())) {
+			errcode = MULTITHREADING_LOCK_ACQUIRE();
+			if (!errcode) {
 				errcode = hci_data_get(hci_buffer);
 				MULTITHREADING_LOCK_RELEASE();
 			}
@@ -197,7 +198,8 @@ static void recv_thread(void *p1, void *p2, void *p3)
 		};
 
 		while (1) {
-			if (!(errcode = MULTITHREADING_LOCK_ACQUIRE())) {
+			errcode = MULTITHREADING_LOCK_ACQUIRE();
+			if (!errcode) {
 				errcode = hci_evt_get(hci_buffer);
 				MULTITHREADING_LOCK_RELEASE();
 			}

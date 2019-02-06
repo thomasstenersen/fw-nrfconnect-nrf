@@ -11,17 +11,8 @@ K_SEM_DEFINE(ble_controller_lock, 1, 1);
 
 int32_t multithreading_lock_acquire(int32_t timeout)
 {
-#if IS_ENABLED(CONFIG_BLECTLR_THREADSAFE_BLOCKING)
+#if IS_ENABLED(CONFIG_BLECTLR_THREADSAFETY)
 	return k_sem_take(&ble_controller_lock, K_MSEC(timeout));
-#else
-	return 0;
-#endif
-}
-
-int32_t multithreading_lock_acquire_try(void)
-{
-#if IS_ENABLED(CONFIG_BLECTLR_THREADSAFE_BLOCKING)
-	return k_sem_take(&ble_controller_lock, K_NO_WAIT);
 #else
 	return 0;
 #endif
@@ -29,7 +20,7 @@ int32_t multithreading_lock_acquire_try(void)
 
 void multithreading_lock_release(void)
 {
-#if IS_ENABLED(CONFIG_BLECTLR_THREADSAFE_BLOCKING)
+#if IS_ENABLED(CONFIG_BLECTLR_THREADSAFETY)
 	k_sem_give(&ble_controller_lock);
 #endif
 }

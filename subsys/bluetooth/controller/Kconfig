@@ -32,7 +32,7 @@ endchoice
 
 comment "Thread safety behavior of BLE controller APIs"
 
-config BLECTLR_THREADSAFE_BLOCKING
+config BLECTLR_THREADSAFETY
 	bool "Enable API blocking for thread safety"
 	depends on MULTITHREADING
 	default y
@@ -40,9 +40,9 @@ config BLECTLR_THREADSAFE_BLOCKING
 		Public API calls such as Crypto and HCI APIs will block
 		if called by multiple threads simultaneously. Only one thread
 		can access the APIs at a time.
-config BLECTLR_THREADSAFE_BLOCKING_TIMEOUT
+config BLECTLR_THREADSAFETY_LOCK_TIMEOUT
 	int "Blocking timeout value (in milliseconds)."
-	depends on BLECTLR_THREADSAFE_BLOCKING
+	depends on BLECTLR_THREADSAFETY
 	default 10
 	help
 		This option can take three kinds of values. -1: API is (forever) blocking, 0: API
