@@ -27,6 +27,14 @@ extern "C" {
 #define MULTITHREADING_LOCK_ACQUIRE() (0)
 #endif
 
+/** Macro for acquiring a lock without waiting */
+#if IS_ENABLED(CONFIG_BLECTLR_THREADSAFETY)
+#define MULTITHREADING_LOCK_ACQUIRE_NO_WAIT() \
+	multithreading_lock_acquire(K_NO_WAIT)
+#else
+#define MULTITHREADING_LOCK_ACQUIRE_NO_WAIT() (0)
+#endif
+
 /** Macro for releasing a lock */
 #if IS_ENABLED(CONFIG_BLECTLR_THREADSAFETY)
 #define MULTITHREADING_LOCK_RELEASE() multithreading_lock_release()

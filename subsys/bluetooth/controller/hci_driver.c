@@ -271,19 +271,6 @@ static int ble_init(void)
 {
 	int32_t err = 0;
 
-	ble_controller_resource_cfg_t resource_cfg;
-
-	resource_cfg.buffer_cfg.rx_packet_size = 251;
-	resource_cfg.buffer_cfg.tx_packet_size = 251;
-	resource_cfg.conn_event_cfg.event_length_us = 50000;
-	resource_cfg.role_cfg.master_count = 1;
-	resource_cfg.role_cfg.slave_count = 1;
-
-	err = ble_controller_resource_cfg_set(BLE_CONTROLLER_DEFAULT_RESOURCE_CFG_TAG, &resource_cfg);
-	if (err < 0 || err > sizeof(ble_controller_mempool)) {
-		return err;
-	}
-
 	nrf_lf_clock_cfg_t clock_cfg;
 
 #ifdef CONFIG_CLOCK_CONTROL_NRF5_K32SRC_RC
@@ -355,8 +342,7 @@ static int ble_init(void)
 
 	err = MULTITHREADING_LOCK_ACQUIRE();
 	if (!err) {
-		err =  ble_controller_enable(host_signal, blectlr_assertion_handler,
-			&clock_cfg, ble_controller_mempool);
+		err =  ble_controller_enable(host_signal, ble_controller_mempool);
 		MULTITHREADING_LOCK_RELEASE();
 	}
 	if (err < 0) {
