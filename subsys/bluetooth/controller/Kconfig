@@ -40,7 +40,7 @@ config BLECTLR_THREADSAFETY
 		Public API calls such as Crypto and HCI APIs will block
 		if called by multiple threads simultaneously. Only one thread
 		can access the APIs at a time.
-config BLECTLR_THREADSAFETY_LOCK_TIMEOUT
+config BLECTLR_THREADSAFETY_LOCK_TIMEOUT_MSEC
 	int "Blocking timeout value (in milliseconds)."
 	depends on BLECTLR_THREADSAFETY
 	default 10

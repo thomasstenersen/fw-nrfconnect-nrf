@@ -22,7 +22,7 @@ extern "C" {
 /** Macro for acquiring a lock */
 #if IS_ENABLED(CONFIG_BLECTLR_THREADSAFETY)
 #define MULTITHREADING_LOCK_ACQUIRE() \
-	multithreading_lock_acquire(CONFIG_BLECTLR_THREADSAFETY_LOCK_TIMEOUT)
+	multithreading_lock_acquire(CONFIG_BLECTLR_THREADSAFETY_LOCK_TIMEOUT_MSEC)
 #else
 #define MULTITHREADING_LOCK_ACQUIRE() (0)
 #endif
@@ -45,9 +45,9 @@ extern "C" {
 /** @brief Try to take the lock while maintaining the specified blocking behavior.
  *
  * This API call will be blocked for the time specified by @ref
- * CONFIG_BLECTLR_THREADSAFETY_LOCK_TIMEOUT and then return error code.
+ * CONFIG_BLECTLR_THREADSAFETY_LOCK_TIMEOUT_MSEC and then return error code.
  *
- * @param  timeout		Timeout value for locking API.
+ * @param  timeout		Timeout value (in milliseconds) for the locking API.
  *
  * @retval 0			Success
  * @retval - ::NRF_EBUSY	Returned without waiting.
