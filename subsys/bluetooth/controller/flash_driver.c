@@ -28,7 +28,7 @@ static int btctlr_flash_erase(struct device *dev, off_t offset, size_t size);
 static int btctlr_flash_write_protection_set(struct device *dev, bool enable);
 
 #if defined(CONFIG_FLASH_PAGE_LAYOUT)
-static int btctlr_flash_page_layout_get(struct device *dev,
+static void btctlr_flash_page_layout_get(struct device *dev,
 					const struct flash_pages_layout **layout,
 					size_t *layout_size);
 #endif /* defined(CONFIG_FLASH_PAGE_LAYOUT) */
@@ -39,7 +39,7 @@ static const struct flash_driver_api btctrl_flash_api = {
 	.erase = btctlr_flash_erase,
 	.write_protection = btctlr_flash_write_protection_set,
 #if defined(CONFIG_FLASH_PAGE_LAYOUT)
-	.page_layout = btctlr_flash_page_layout_get
+	.page_layout = btctlr_flash_page_layout_get,
 #endif  /* CONFIG_FLASH_PAGE_LAYOUT */
 	.write_block_size = FLASH_DRIVER_WRITE_BLOCK_SIZE
 };
@@ -138,7 +138,7 @@ static int btctlr_flash_write_protection_set(struct device *dev, bool enable)
 #if defined(CONFIG_FLASH_PAGE_LAYOUT)
 static struct flash_pages_layout dev_layout;
 
-static int btctlr_flash_page_layout_get(struct device *dev,
+static void btctlr_flash_page_layout_get(struct device *dev,
 					const struct flash_pages_layout **layout,
 					size_t *layout_size)
 {
