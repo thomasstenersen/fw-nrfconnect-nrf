@@ -40,8 +40,8 @@ static int btctlr_flash_write_protection_set(struct device *dev, bool enable);
 
 #if defined(CONFIG_FLASH_PAGE_LAYOUT)
 static void btctlr_flash_page_layout_get(struct device *dev,
-					const struct flash_pages_layout **layout,
-					size_t *layout_size);
+					 const struct flash_pages_layout **layout,
+					 size_t *layout_size);
 #endif /* defined(CONFIG_FLASH_PAGE_LAYOUT) */
 
 static const struct flash_driver_api btctrl_flash_api = {
@@ -96,10 +96,12 @@ static int btctlr_flash_read(struct device *dev, off_t offset, void *data, size_
 
 	/* TODO: CONFIG_MULTITHREADING */
 	err = k_sem_take(&flash_state.sem, K_FOREVER);
-	if (!err) {
-		memcpy(data, (void *)offset, len);
-		k_sem_give(&flash_state.sem);
+	if (err) {
+		return err;
 	}
+
+	memcpy(data, (void *)offset, len);
+	k_sem_give(&flash_state.sem);
 
 	return err;
 }
@@ -112,13 +114,14 @@ static int btctlr_flash_write(struct device *dev, off_t offset, const void *data
 	int err;
 
 	err = k_sem_take(&flash_state.sem, K_FOREVER);
-	if (!err) {
-		__ASSERT_NO_MSG(flash_state.op == FLASH_OP_NONE);
-		flash_state.op = FLASH_OP_WRITE;
-		err = ble_controller_flash_write((u32_t) offset, data, len,
-						 flash_operation_complete_callback);
+	if (err) {
+		return err;
 	}
 
+	__ASSERT_NO_MSG(flash_state.op == FLASH_OP_NONE);
+	flash_state.op = FLASH_OP_WRITE;
+	err = ble_controller_flash_write((u32_t) offset, data, len,
+					 flash_operation_complete_callback);
 	return err;
 }
 
@@ -140,16 +143,18 @@ static int btctlr_flash_erase(struct device *dev, off_t offset, size_t len)
 	}
 
 	if (page_count == 0) {
-	    return 0;
+		return 0;
 	}
 
 	err = k_sem_take(&flash_state.sem, K_FOREVER);
-	if (!err) {
-		__ASSERT_NO_MSG(flash_state.op == FLASH_OP_NONE);
-		flash_state.op = FLASH_OP_ERASE;
-		err = ble_controller_flash_page_erase(offset,
-						      flash_operation_complete_callback);
+	if (err) {
+		return err;
 	}
+
+	__ASSERT_NO_MSG(flash_state.op == FLASH_OP_NONE);
+	flash_state.op = FLASH_OP_ERASE;
+	err = ble_controller_flash_page_erase(offset,
+					      flash_operation_complete_callback);
 	return err;
 }
 
@@ -163,11 +168,11 @@ static int btctlr_flash_write_protection_set(struct device *dev, bool enable)
 static struct flash_pages_layout dev_layout;
 
 static void btctlr_flash_page_layout_get(struct device *dev,
-					const struct flash_pages_layout **layout,
-					size_t *layout_size)
+					 const struct flash_pages_layout **layout,
+					 size_t *layout_size)
 {
-    *layout = &dev_layout;
-    *layout_size = 1;
+	*layout = &dev_layout;
+	*layout_size = 1;
 }
 #endif /* defined(CONFIG_FLASH_PAGE_LAYOUT) */
 
