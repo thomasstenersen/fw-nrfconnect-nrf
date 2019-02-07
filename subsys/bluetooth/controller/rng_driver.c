@@ -35,8 +35,9 @@ static int rng_driver_get_entropy(struct device *dev, u8_t *buf, u16_t len)
 	while (bytes_left > 0) {
 		int32_t bytes_read = 0;
 		while (bytes_read <= 0) {
-			if (!MULTITHREADING_LOCK_ACQUIRE()) {
-				bytes_read = ble_controller_rand_vector_get(p_dst, bytes_left);
+			if (MULTITHREADING_LOCK_ACQUIRE_FOREVER_WAIT() == 0) {
+				bytes_read = ble_controller_rand_vector_get(
+					p_dst, bytes_left);
 				MULTITHREADING_LOCK_RELEASE();
 			}
 
@@ -68,7 +69,7 @@ static int rng_driver_get_entropy_isr(struct device *dev, u8_t *buf, u16_t len,
 		return errcode;
 	}
 
-	errcode = MULTITHREADING_LOCK_ACQUIRE_NO_WAIT();
+	errcode = MULTITHREADING_LOCK_ACQUIRE_FOREVER_WAIT();
 	if (!errcode) {
 		ble_controller_rand_vector_get_blocking(buf, len);
 		MULTITHREADING_LOCK_RELEASE();
