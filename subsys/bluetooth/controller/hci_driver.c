@@ -198,7 +198,7 @@ static void signal_thread(void *p1, void *p2, void *p3)
 
 	while (true) {
 		k_sem_take(&sem_signal, K_FOREVER);
-		ble_controller_process_SWI5_IRQ();
+		ble_controller_process_low_prio_job();
 	}
 }
 
@@ -283,7 +283,7 @@ static int32_t ble_init(void)
 	clock_cfg.rc_ctiv = BLE_CONTROLLER_RECOMMENDED_RC_CTIV;
 	clock_cfg.rc_temp_ctiv = BLE_CONTROLLER_RECOMMENDED_RC_TEMP_CTIV;
 
-	err = ble_controller_init(blectlr_assertion_handler, &clock_cfg);
+	err = ble_controller_init(blectlr_assertion_handler, &clock_cfg, SWI5_IRQn);
 	if (err < 0) {
 		return err;
 	}
