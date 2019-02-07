@@ -81,7 +81,7 @@ static int hci_driver_send(struct net_buf *buf)
 		BT_DBG("ACL_OUT");
 		err = acl_handle(buf);
 		break;
-#endif          /* CONFIG_BT_CONN */
+#endif /* CONFIG_BT_CONN */
 	case BT_BUF_CMD:
 		BT_DBG("CMD");
 		err = cmd_handle(buf);
@@ -288,16 +288,42 @@ static int32_t ble_init(void)
 		return err;
 	}
 
-	ble_controller_resource_cfg_t resource_cfg;
+	ble_controller_cfg_t cfg;
 
-	resource_cfg.buffer_cfg.rx_packet_size = 251;
-	resource_cfg.buffer_cfg.tx_packet_size = 251;
-	resource_cfg.conn_event_cfg.event_length_us = 50000;
-	resource_cfg.role_cfg.master_count = 1;
-	resource_cfg.role_cfg.slave_count = 1;
+	cfg.master_count.count = 1;
 
-	err = ble_controller_resource_cfg_set(
-		BLE_CONTROLLER_DEFAULT_RESOURCE_CFG_TAG, &resource_cfg);
+	err = ble_controller_cfg_set(BLE_CONTROLLER_DEFAULT_RESOURCE_CFG_TAG,
+				     BLE_CONTROLLER_CFG_TYPE_MASTER_COUNT,
+				     &cfg);
+	if (err < 0 || err > sizeof(ble_controller_mempool)) {
+		return err;
+	}
+
+	cfg.slave_count.count = 1;
+
+	err = ble_controller_cfg_set(BLE_CONTROLLER_DEFAULT_RESOURCE_CFG_TAG,
+				     BLE_CONTROLLER_CFG_TYPE_SLAVE_COUNT,
+				     &cfg);
+	if (err < 0 || err > sizeof(ble_controller_mempool)) {
+		return err;
+	}
+
+	cfg.buffer_cfg.rx_packet_size = 251;
+	cfg.buffer_cfg.tx_packet_size = 251;
+	cfg.buffer_cfg.rx_packet_count = 10;
+	cfg.buffer_cfg.tx_packet_count = 10;
+
+	err = ble_controller_cfg_set(BLE_CONTROLLER_DEFAULT_RESOURCE_CFG_TAG,
+				     BLE_CONTROLLER_CFG_TYPE_BUFFER_CFG,
+				     &cfg);
+	if (err < 0 || err > sizeof(ble_controller_mempool)) {
+		return err;
+	}
+
+	cfg.event_length.event_length_us = 7500;
+	err = ble_controller_cfg_set(BLE_CONTROLLER_DEFAULT_RESOURCE_CFG_TAG,
+				     BLE_CONTROLLER_CFG_TYPE_EVENT_LENGTH,
+				     &cfg);
 	if (err < 0 || err > sizeof(ble_controller_mempool)) {
 		return err;
 	}
