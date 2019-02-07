@@ -19,7 +19,18 @@ LOG_MODULE_REGISTER(LOG_MODULE_NAME, LOG_LEVEL_DBG);
 
 #define FLASH_DRIVER_WRITE_BLOCK_SIZE 1
 
-static struct k_sem sem_flash;
+static struct {
+	/** Used to ensure a single ongoing operation at any time.  */
+	struct k_sem sem;
+	off_t addr;
+	u16_t len;
+	/* NOTE: Read is not async, so not a part of this enum. */
+	enum {
+		FLASH_OP_NONE,
+		FLASH_OP_WRITE,
+		FLASH_OP_ERASE
+	} op;
+} flash_state;
 
 /* Forward declarations */
 static int btctlr_flash_read(struct device *dev, off_t offset, void *data, size_t len);
@@ -63,14 +74,18 @@ static inline bool is_page_aligned(off_t addr)
 
 static void flash_operation_complete_callback(u32_t status)
 {
-	k_sem_give(&sem_flash);
-	LOG_DBG("Flash write complete\n");
+	__ASSERT_NO_MSG(flash_state.op != FLASH_OP_NONE);
+	flash_state.op = FLASH_OP_NONE;
+	k_sem_give(&flash_state.sem);
+	LOG_DBG("Flash operation complete\n");
 }
 
 /* Driver API. */
 
 static int btctlr_flash_read(struct device *dev, off_t offset, void *data, size_t len)
 {
+	int err;
+
 	if (!is_addr_valid(offset, len)) {
 		return -EINVAL;
 	}
@@ -80,8 +95,13 @@ static int btctlr_flash_read(struct device *dev, off_t offset, void *data, size_
 	}
 
 	/* TODO: CONFIG_MULTITHREADING */
-	memcpy(data, (void *)offset, len);
-	return 0;
+	err = k_sem_take(&flash_state.sem, K_FOREVER);
+	if (!err) {
+		memcpy(data, (void *)offset, len);
+		k_sem_give(&flash_state.sem);
+	}
+
+	return err;
 }
 
 static int btctlr_flash_write(struct device *dev, off_t offset, const void *data, size_t len)
@@ -91,8 +111,10 @@ static int btctlr_flash_write(struct device *dev, off_t offset, const void *data
 
 	int err;
 
-	err = k_sem_take(&sem_flash, K_FOREVER);
+	err = k_sem_take(&flash_state.sem, K_FOREVER);
 	if (!err) {
+		__ASSERT_NO_MSG(flash_state.op == FLASH_OP_NONE);
+		flash_state.op = FLASH_OP_WRITE;
 		err = ble_controller_flash_write((u32_t) offset, data, len,
 						 flash_operation_complete_callback);
 	}
@@ -121,8 +143,10 @@ static int btctlr_flash_erase(struct device *dev, off_t offset, size_t len)
 	    return 0;
 	}
 
-	err = k_sem_take(&sem_flash, K_FOREVER);
+	err = k_sem_take(&flash_state.sem, K_FOREVER);
 	if (!err) {
+		__ASSERT_NO_MSG(flash_state.op == FLASH_OP_NONE);
+		flash_state.op = FLASH_OP_ERASE;
 		err = ble_controller_flash_page_erase(offset,
 						      flash_operation_complete_callback);
 	}
@@ -131,7 +155,7 @@ static int btctlr_flash_erase(struct device *dev, off_t offset, size_t len)
 
 static int btctlr_flash_write_protection_set(struct device *dev, bool enable)
 {
-	/* TODO: CONFIG_MULTITHREADING */
+	/* The BLE controller handles the write protection automatically. */
 	return 0;
 }
 
@@ -150,7 +174,7 @@ static void btctlr_flash_page_layout_get(struct device *dev,
 static int nrf_btctrl_flash_init(struct device *dev)
 {
 	dev->driver_api = &btctrl_flash_api;
-	k_sem_init(&sem_flash, 1, 1);
+	k_sem_init(&flash_state.sem, 1, 1);
 
 #if defined(CONFIG_FLASH_PAGE_LAYOUT)
 	dev_layout.pages_count = NRF_FICR->CODESIZE;
