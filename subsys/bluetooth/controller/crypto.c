@@ -20,7 +20,7 @@ LOG_MODULE_REGISTER(LOG_MODULE_NAME, LOG_LEVEL_DBG);
 
 int bt_rand(void *buf, size_t len)
 {
-	if (len > UINT8_MAX || buf == NULL) {
+	if (buf == NULL) {
 		return -NRF_EINVAL;
 	}
 
@@ -56,7 +56,9 @@ int bt_encrypt_le(const u8_t key[16], const u8_t plaintext[16],
 		MULTITHREADING_LOCK_RELEASE();
 	}
 
-	LOG_HEXDUMP_DBG(enc_data, 16, "enc_data");
+	if (!errcode) {
+		LOG_HEXDUMP_DBG(enc_data, 16, "enc_data");
+	}
 
 	return errcode;
 }
@@ -78,9 +80,11 @@ int bt_encrypt_be(const u8_t key[16], const u8_t plaintext[16],
 		MULTITHREADING_LOCK_RELEASE();
 	}
 
-	sys_memcpy_swap(enc_data, enc_data_le, 16);
+	if (!errcode) {
+		sys_memcpy_swap(enc_data, enc_data_le, 16);
 
-	LOG_HEXDUMP_DBG(enc_data, 16, "enc_data");
+		LOG_HEXDUMP_DBG(enc_data, 16, "enc_data");
+	}
 
 	return errcode;
 }
