@@ -20,6 +20,7 @@ LOG_MODULE_REGISTER(LOG_MODULE_NAME, LOG_LEVEL_DBG);
 /* TODO: Shouldn't this macro be defined in some kernel header? Doesn't seems
  * like it is available globally. */
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define FLASH_DRIVER_WRITE_BLOCK_SIZE 1
 
 static struct {
@@ -28,6 +29,8 @@ static struct {
 	const void *data;
 	off_t addr;
 	u16_t len;
+	u16_t prev_len;
+	uint32_t tmp_word;      /**< Used for unalinged writes. */
 	/* NOTE: Read is not async, so not a part of this enum. */
 	enum {
 		FLASH_OP_NONE,
@@ -73,6 +76,21 @@ static inline bool is_addr_valid(off_t addr, size_t len)
 	return true;
 }
 
+static inline bool is_aligned_32(off_t addr)
+{
+	return ((addr & 0x3) == 0);
+}
+
+static inline off_t align_32(off_t addr)
+{
+	return (addr & ~0x3);
+}
+
+static inline size_t bytes_to_words(size_t bytes)
+{
+	return bytes / sizeof(u32_t);
+}
+
 static inline bool is_page_aligned(off_t addr)
 {
 	return (addr % NRF_FICR->CODEPAGESIZE) == 0;
@@ -82,12 +100,15 @@ static void flash_operation_complete_callback(u32_t status)
 {
 	__ASSERT_NO_MSG(flash_state.op == FLASH_OP_WRITE ||
 			flash_state.op == FLASH_OP_ERASE);
-	LOG_DBG("Flash op %u complete\n", flash_state.op);
+	LOG_DBG("Flash op %u complete", flash_state.op);
+	if (flash_state.op == FLASH_OP_WRITE) {
+		LOG_HEXDUMP_DBG(flash_state.data, flash_state.prev_len, "wrote");
+	}
+
 	int err;
-	size_t prev_op_len = MIN(flash_state.len, NRF_FICR->CODEPAGESIZE);
-	flash_state.addr += prev_op_len;
-	flash_state.data = (const void *) ((intptr_t) flash_state.data + prev_op_len);
-	flash_state.len -= prev_op_len;
+	flash_state.addr += flash_state.prev_len;
+	flash_state.data = (const void *) ((intptr_t) flash_state.data + flash_state.prev_len);
+	flash_state.len -= flash_state.prev_len;
 
 	if (flash_state.len > 0) {
 		err = flash_op_execute();
@@ -99,15 +120,46 @@ static void flash_operation_complete_callback(u32_t status)
 	}
 }
 
+static int flash_op_write(void)
+{
+	/* nRF52832 Product specification:
+	 *  Only full 32-bit words can be written to Flash using the
+	 *  NVMC interface. To write less than 32 bits to Flash, write
+	 *  the data as a word, and set all the bits that should remain
+	 *  unchanged in the word to '1'. */
+	flash_state.tmp_word = ~0x0;
+
+	if (!is_aligned_32(flash_state.addr) ||
+	    !is_aligned_32((off_t) flash_state.data) ||
+	    flash_state.len < sizeof(u32_t)) {
+		size_t len = sizeof(u32_t) - MAX((u32_t) flash_state.addr & 0x3,
+						 (u32_t) flash_state.data & 0x3);
+		len = MIN(len, flash_state.len);
+		memcpy(&((uint8_t *) &flash_state.tmp_word)[flash_state.addr & 0x3],
+		       flash_state.data, len);
+
+		flash_state.prev_len = len;
+		return ble_controller_flash_write((u32_t) align_32(flash_state.addr),
+						  &flash_state.tmp_word,
+						  1,
+						  flash_operation_complete_callback);
+	} else   {
+		flash_state.prev_len = MIN(align_32(flash_state.len), NRF_FICR->CODEPAGESIZE);
+		return ble_controller_flash_write((u32_t) flash_state.addr,
+						  flash_state.data,
+						  bytes_to_words(flash_state.prev_len),
+						  flash_operation_complete_callback);
+	}
+}
+
 static int flash_op_execute(void)
 {
 	int err;
-	size_t len = MIN(flash_state.len, NRF_FICR->CODEPAGESIZE);
-	LOG_DBG("Addr %x len %u data %x next len %x\n", flash_state.addr, flash_state.len, (u32_t)flash_state.data, len);
+
 	if (flash_state.op == FLASH_OP_WRITE) {
-		err = ble_controller_flash_write((u32_t) flash_state.addr, flash_state.data, len,
-						 flash_operation_complete_callback);
+		err = flash_op_write();
 	} else if (flash_state.op == FLASH_OP_ERASE) {
+		flash_state.prev_len = NRF_FICR->CODEPAGESIZE;
 		err = ble_controller_flash_page_erase((u32_t) flash_state.addr,
 						      flash_operation_complete_callback);
 	} else {
