@@ -13,6 +13,8 @@
 #include <ble_controller.h>
 #include <ble_controller_soc.h>
 
+#include "multithreading_lock.h"
+
 #define DEV_DATA(dev) \
 	((struct rng_driver_data *)(dev)->driver_data)
 
@@ -31,11 +33,20 @@ static int rng_driver_get_entropy(struct device *dev, u8_t *buf, u16_t len)
 	u8_t *p_dst = buf;
 	u16_t bytes_left = len;
 	while (bytes_left > 0) {
-		int32_t bytes_read;
-		while ((bytes_read = ble_controller_rand_vector_get(p_dst, bytes_left)) <= 0) {
-			/* Put the thread on wait until next interrupt to get more
-			 * random values. */
-			k_sem_take(&rng_data.sem_sync, K_FOREVER);
+		int32_t bytes_read = 0;
+		while (bytes_read <= 0) {
+			int32_t errcode = MULTITHREADING_LOCK_ACQUIRE();
+			if (errcode) {
+				return errcode;
+			}
+			bytes_read = ble_controller_rand_vector_get(p_dst, bytes_left);
+			MULTITHREADING_LOCK_RELEASE();
+
+			if (!bytes_read) {
+				/* Put the thread on wait until next interrupt to get more
+				 * random values. */
+				k_sem_take(&rng_data.sem_sync, K_FOREVER);
+			}
 		}
 
 		p_dst += bytes_read;
@@ -49,14 +60,29 @@ static int rng_driver_get_entropy_isr(struct device *dev, u8_t *buf, u16_t len,
 				      u32_t flags)
 {
 	__ASSERT_NO_MSG(&rng_data == DEV_DATA(dev));
-
+	s32_t errcode;
 	if (likely((flags & ENTROPY_BUSYWAIT) == 0)) {
-		return ble_controller_rand_vector_get(buf, len);
+		errcode = MULTITHREADING_LOCK_ACQUIRE_NO_WAIT();
+		if (!errcode) {
+			errcode = ble_controller_rand_vector_get(buf, len);
+			MULTITHREADING_LOCK_RELEASE();
+		}
+		return errcode;
 	}
 
-	ble_controller_rand_vector_get_blocking(buf, len);
+	errcode = MULTITHREADING_LOCK_ACQUIRE_FOREVER_WAIT();
+	if (!errcode) {
+		ble_controller_rand_vector_get_blocking(buf, len);
+		MULTITHREADING_LOCK_RELEASE();
+	}
 
-	return len;
+	if (!errcode) {
+		return len;
+	}
+	else
+	{
+		return errcode;
+	}
 }
 
 static void rng_driver_isr(void *param)

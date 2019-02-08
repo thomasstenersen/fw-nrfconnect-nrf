@@ -12,6 +12,7 @@
 
 #include <ble_controller.h>
 #include <ble_controller_hci.h>
+#include "multithreading_lock.h"
 
 #define BT_DBG_ENABLED IS_ENABLED(CONFIG_BT_DEBUG_HCI_DRIVER)
 #define LOG_MODULE_NAME bt_ctlr_hci_driver
@@ -40,7 +41,12 @@ void blectlr_assertion_handler(const char *const file, const u32_t line)
 
 static int cmd_handle(struct net_buf *cmd)
 {
-	if (hci_cmd_put(cmd->data)) {
+	int32_t errcode = MULTITHREADING_LOCK_ACQUIRE();
+	if (!errcode) {
+		errcode = hci_cmd_put(cmd->data);
+		MULTITHREADING_LOCK_RELEASE();
+	}
+	if (errcode) {
 		return -ENOBUFS;
 	}
 
@@ -52,7 +58,12 @@ static int cmd_handle(struct net_buf *cmd)
 #if defined(CONFIG_BT_CONN)
 static int acl_handle(struct net_buf *acl)
 {
-	if (hci_data_put(acl->data)) {
+	int32_t errcode = MULTITHREADING_LOCK_ACQUIRE();
+	if (!errcode) {
+		errcode = hci_data_put(acl->data);
+		MULTITHREADING_LOCK_RELEASE();
+	}
+	if (errcode) {
 		/* Likely buffer overflow event */
 		k_sem_give(&sem_recv);
 		return -ENOBUFS;
@@ -64,7 +75,7 @@ static int acl_handle(struct net_buf *acl)
 
 static int hci_driver_send(struct net_buf *buf)
 {
-	int err;
+	int32_t  err;
 	u8_t type;
 
 	BT_DBG("Enter");
@@ -167,18 +178,37 @@ static void recv_thread(void *p1, void *p2, void *p3)
 	ARG_UNUSED(p3);
 
 	static u8_t hci_buffer[256 + 4];
+	int32_t errcode;
 
 	BT_DBG("Started");
 	while (1) {
 		k_sem_take(&sem_recv, K_FOREVER);
 
-		while (hci_data_get(hci_buffer) == 0) {
-			data_packet_process(hci_buffer);
-		}
+		while (1) {
+			errcode = MULTITHREADING_LOCK_ACQUIRE();
+			if (!errcode) {
+				errcode = hci_data_get(hci_buffer);
+				MULTITHREADING_LOCK_RELEASE();
+			}
+			if (!errcode) {
+				data_packet_process(hci_buffer);
+			} else {
+				break;
+			}
+		};
 
-		while (hci_evt_get(hci_buffer) == 0) {
-			event_packet_process(hci_buffer);
-		}
+		while (1) {
+			errcode = MULTITHREADING_LOCK_ACQUIRE();
+			if (!errcode) {
+				errcode = hci_evt_get(hci_buffer);
+				MULTITHREADING_LOCK_RELEASE();
+			}
+			if (!errcode) {
+				event_packet_process(hci_buffer);
+			} else {
+				break;
+			}
+		};
 
 		/* Let other threads of same priority run in between. */
 		k_yield();
@@ -237,7 +267,7 @@ void SIGNALLING_Handler(void)
 	k_sem_give(&sem_signal);
 }
 
-static int32_t ble_init(void)
+static int ble_init(void)
 {
 	int32_t err = 0;
 
@@ -283,7 +313,11 @@ static int32_t ble_init(void)
 	clock_cfg.rc_ctiv = BLE_CONTROLLER_RECOMMENDED_RC_CTIV;
 	clock_cfg.rc_temp_ctiv = BLE_CONTROLLER_RECOMMENDED_RC_TEMP_CTIV;
 
-	err = ble_controller_init(blectlr_assertion_handler, &clock_cfg);
+	err = MULTITHREADING_LOCK_ACQUIRE();
+	if (!err) {
+		err = ble_controller_init(blectlr_assertion_handler, &clock_cfg);
+		MULTITHREADING_LOCK_RELEASE();
+	}
 	if (err < 0) {
 		return err;
 	}
@@ -328,7 +362,11 @@ static int32_t ble_init(void)
 		return err;
 	}
 
-	err = ble_controller_enable(host_signal, ble_controller_mempool);
+	err = MULTITHREADING_LOCK_ACQUIRE();
+	if (!err) {
+		err =  ble_controller_enable(host_signal, ble_controller_mempool);
+		MULTITHREADING_LOCK_RELEASE();
+	}
 	if (err < 0) {
 		return err;
 	}
@@ -342,7 +380,10 @@ static int hci_driver_init(struct device *unused)
 
 	bt_hci_driver_register(&drv);
 
-	int32_t err = ble_init();
+	int32_t  err = 0;
+
+	err = ble_init();
+
 	if (err < 0) {
 		return err;
 	}
