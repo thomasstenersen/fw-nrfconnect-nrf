@@ -17,11 +17,15 @@
 #define LOG_MODULE_NAME blectrl_flash
 LOG_MODULE_REGISTER(LOG_MODULE_NAME, LOG_LEVEL_DBG);
 
+/* TODO: Shouldn't this macro be defined in some kernel header? Doesn't seems
+ * like it is available globally. */
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
 #define FLASH_DRIVER_WRITE_BLOCK_SIZE 1
 
 static struct {
 	/** Used to ensure a single ongoing operation at any time.  */
 	struct k_sem sem;
+	const void *data;
 	off_t addr;
 	u16_t len;
 	/* NOTE: Read is not async, so not a part of this enum. */
@@ -37,6 +41,8 @@ static int btctlr_flash_read(struct device *dev, off_t offset, void *data, size_
 static int btctlr_flash_write(struct device *dev, off_t offset, const void *data, size_t len);
 static int btctlr_flash_erase(struct device *dev, off_t offset, size_t size);
 static int btctlr_flash_write_protection_set(struct device *dev, bool enable);
+
+static int flash_op_execute(void);
 
 #if defined(CONFIG_FLASH_PAGE_LAYOUT)
 static void btctlr_flash_page_layout_get(struct device *dev,
@@ -74,10 +80,41 @@ static inline bool is_page_aligned(off_t addr)
 
 static void flash_operation_complete_callback(u32_t status)
 {
-	__ASSERT_NO_MSG(flash_state.op != FLASH_OP_NONE);
-	flash_state.op = FLASH_OP_NONE;
-	k_sem_give(&flash_state.sem);
-	LOG_DBG("Flash operation complete\n");
+	__ASSERT_NO_MSG(flash_state.op == FLASH_OP_WRITE ||
+			flash_state.op == FLASH_OP_ERASE);
+	LOG_DBG("Flash op %u complete\n", flash_state.op);
+	int err;
+	size_t prev_op_len = MIN(flash_state.len, NRF_FICR->CODEPAGESIZE);
+	flash_state.addr += prev_op_len;
+	flash_state.data = (const void *) ((intptr_t) flash_state.data + prev_op_len);
+	flash_state.len -= prev_op_len;
+
+	if (flash_state.len > 0) {
+		err = flash_op_execute();
+		/* All inputs should have been validated on the first call. */
+		__ASSERT(err == 0, "Continued flash operation failed\n");
+	} else {
+		flash_state.op = FLASH_OP_NONE;
+		k_sem_give(&flash_state.sem);
+	}
+}
+
+static int flash_op_execute(void)
+{
+	int err;
+	size_t len = MIN(flash_state.len, NRF_FICR->CODEPAGESIZE);
+	LOG_DBG("Addr %x len %u data %x next len %x\n", flash_state.addr, flash_state.len, (u32_t)flash_state.data, len);
+	if (flash_state.op == FLASH_OP_WRITE) {
+		err = ble_controller_flash_write((u32_t) flash_state.addr, flash_state.data, len,
+						 flash_operation_complete_callback);
+	} else if (flash_state.op == FLASH_OP_ERASE) {
+		err = ble_controller_flash_page_erase((u32_t) flash_state.addr,
+						      flash_operation_complete_callback);
+	} else {
+		__ASSERT(0, "Unsupported operation\n");
+	}
+
+	return err;
 }
 
 /* Driver API. */
@@ -109,9 +146,12 @@ static int btctlr_flash_read(struct device *dev, off_t offset, void *data, size_
 static int btctlr_flash_write(struct device *dev, off_t offset, const void *data, size_t len)
 {
 	/* TODO: CONFIG_MULTITHREADING */
-	/* TODO: Support multi-page write. */
 
 	int err;
+
+	if (!is_addr_valid(offset, len)) {
+		return -EINVAL;
+	}
 
 	err = k_sem_take(&flash_state.sem, K_FOREVER);
 	if (err) {
@@ -120,8 +160,15 @@ static int btctlr_flash_write(struct device *dev, off_t offset, const void *data
 
 	__ASSERT_NO_MSG(flash_state.op == FLASH_OP_NONE);
 	flash_state.op = FLASH_OP_WRITE;
-	err = ble_controller_flash_write((u32_t) offset, data, len,
-					 flash_operation_complete_callback);
+	flash_state.data = data;
+	flash_state.addr = offset;
+	flash_state.len = len;
+
+	err = flash_op_execute();
+	if (err) {
+		k_sem_give(&flash_state.sem);
+	}
+
 	return err;
 }
 
@@ -137,11 +184,6 @@ static int btctlr_flash_erase(struct device *dev, off_t offset, size_t len)
 		return -EINVAL;
 	}
 
-	/* TODO: Support multi-page erase. */
-	if (page_count > 1) {
-		return -EINVAL;
-	}
-
 	if (page_count == 0) {
 		return 0;
 	}
@@ -153,8 +195,14 @@ static int btctlr_flash_erase(struct device *dev, off_t offset, size_t len)
 
 	__ASSERT_NO_MSG(flash_state.op == FLASH_OP_NONE);
 	flash_state.op = FLASH_OP_ERASE;
-	err = ble_controller_flash_page_erase(offset,
-					      flash_operation_complete_callback);
+	flash_state.addr = offset;
+	flash_state.len = len;
+
+	err = flash_op_execute();
+	if (err) {
+		k_sem_give(&flash_state.sem);
+	}
+
 	return err;
 }
 
