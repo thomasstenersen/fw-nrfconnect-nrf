@@ -10,6 +10,7 @@
 #include <device.h>
 #include <soc.h>
 #include <flash.h>
+#include <misc/util.h>
 
 #include "ble_controller_soc.h"
 #include "multithreading_lock.h"
@@ -18,10 +19,6 @@
 #define LOG_MODULE_NAME blectrl_flash
 LOG_MODULE_REGISTER(LOG_MODULE_NAME, LOG_LEVEL_DBG);
 
-/* TODO: Shouldn't this macro be defined in some kernel header? Doesn't seems
- * like it is available globally. */
-#define MIN(a, b) ((a) < (b) ? (a) : (b))
-#define MAX(a, b) ((a) > (b) ? (a) : (b))
 #define FLASH_DRIVER_WRITE_BLOCK_SIZE 1
 
 static struct {
@@ -133,9 +130,9 @@ static int flash_op_write(void)
 	if (!is_aligned_32(flash_state.addr) ||
 	    !is_aligned_32((off_t) flash_state.data) ||
 	    flash_state.len < sizeof(u32_t)) {
-		size_t len = sizeof(u32_t) - MAX((u32_t) flash_state.addr & 0x3,
+		size_t len = sizeof(u32_t) - max((u32_t) flash_state.addr & 0x3,
 						 (u32_t) flash_state.data & 0x3);
-		len = MIN(len, flash_state.len);
+		len = min(len, flash_state.len);
 		memcpy(&((uint8_t *) &flash_state.tmp_word)[flash_state.addr & 0x3],
 		       flash_state.data, len);
 
@@ -145,7 +142,7 @@ static int flash_op_write(void)
 						  1,
 						  flash_operation_complete_callback);
 	} else {
-		flash_state.prev_len = MIN(align_32(flash_state.len), NRF_FICR->CODEPAGESIZE);
+		flash_state.prev_len = min(align_32(flash_state.len), NRF_FICR->CODEPAGESIZE);
 		return ble_controller_flash_write((u32_t) flash_state.addr,
 						  flash_state.data,
 						  bytes_to_words(flash_state.prev_len),
