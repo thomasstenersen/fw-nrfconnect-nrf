@@ -228,7 +228,7 @@ static void signal_thread(void *p1, void *p2, void *p3)
 
 	while (true) {
 		k_sem_take(&sem_signal, K_FOREVER);
-		ble_controller_process_low_prio_job();
+		ble_controller_low_prio_tasks_process();
 	}
 }
 
