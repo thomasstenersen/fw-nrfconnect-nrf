@@ -12,6 +12,7 @@
 #include <flash.h>
 
 #include "ble_controller_soc.h"
+#include "multithreading_lock.h"
 
 #include <logging/log.h>
 #define LOG_MODULE_NAME blectrl_flash
@@ -143,7 +144,7 @@ static int flash_op_write(void)
 						  &flash_state.tmp_word,
 						  1,
 						  flash_operation_complete_callback);
-	} else   {
+	} else {
 		flash_state.prev_len = MIN(align_32(flash_state.len), NRF_FICR->CODEPAGESIZE);
 		return ble_controller_flash_write((u32_t) flash_state.addr,
 						  flash_state.data,
@@ -156,17 +157,20 @@ static int flash_op_execute(void)
 {
 	int err;
 
-	if (flash_state.op == FLASH_OP_WRITE) {
-		err = flash_op_write();
-	} else if (flash_state.op == FLASH_OP_ERASE) {
-		flash_state.prev_len = NRF_FICR->CODEPAGESIZE;
-		err = ble_controller_flash_page_erase((u32_t) flash_state.addr,
-						      flash_operation_complete_callback);
-	} else {
-		__ASSERT(0, "Unsupported operation\n");
-		err = -EINVAL;
+	err = MULTITHREADING_LOCK_ACQUIRE();
+	if (!err) {
+		if (flash_state.op == FLASH_OP_WRITE) {
+			err = flash_op_write();
+		} else if (flash_state.op == FLASH_OP_ERASE) {
+			flash_state.prev_len = NRF_FICR->CODEPAGESIZE;
+			err = ble_controller_flash_page_erase((u32_t) flash_state.addr,
+							      flash_operation_complete_callback);
+		} else {
+			__ASSERT(0, "Unsupported operation\n");
+			err = -EINVAL;
+		}
 	}
-
+	MULTITHREADING_LOCK_RELEASE();
 	return err;
 }
 
@@ -184,7 +188,6 @@ static int btctlr_flash_read(struct device *dev, off_t offset, void *data, size_
 		return 0;
 	}
 
-	/* TODO: CONFIG_MULTITHREADING */
 	err = k_sem_take(&flash_state.sem, K_FOREVER);
 	if (err) {
 		return err;
@@ -198,8 +201,6 @@ static int btctlr_flash_read(struct device *dev, off_t offset, void *data, size_
 
 static int btctlr_flash_write(struct device *dev, off_t offset, const void *data, size_t len)
 {
-	/* TODO: CONFIG_MULTITHREADING */
-
 	int err;
 
 	if (!is_addr_valid(offset, len)) {
@@ -227,7 +228,6 @@ static int btctlr_flash_write(struct device *dev, off_t offset, const void *data
 
 static int btctlr_flash_erase(struct device *dev, off_t offset, size_t len)
 {
-	/* TODO: CONFIG_MULTITHREADING */
 	int err;
 	int page_count = len / NRF_FICR->CODEPAGESIZE;
 
