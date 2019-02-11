@@ -7,8 +7,10 @@
 zephyr_library()
 
 zephyr_library_sources(
+  multithreading_lock.c
   hci_driver.c
   power_clock_driver.c
+  rng_driver.c
   )
 
 zephyr_library_sources_ifdef(
