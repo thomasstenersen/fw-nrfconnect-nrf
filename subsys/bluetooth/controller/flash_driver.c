@@ -164,6 +164,7 @@ static int flash_op_execute(void)
 						      flash_operation_complete_callback);
 	} else {
 		__ASSERT(0, "Unsupported operation\n");
+		err = -EINVAL;
 	}
 
 	return err;
