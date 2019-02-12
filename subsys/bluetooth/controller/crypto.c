@@ -16,7 +16,6 @@
 
 #define BT_DBG_ENABLED IS_ENABLED(CONFIG_BT_DEBUG_KEYS)
 #define LOG_MODULE_NAME ble_controller_crypto
-//LOG_MODULE_REGISTER(LOG_MODULE_NAME, LOG_LEVEL_DBG);
 #include <common/log.h>
 
 int bt_rand(void *buf, size_t len)

@@ -46,7 +46,6 @@ void test_bt_encrypt_le(void)
 	/* Test custom mock behavior, this ensures that API's internal transformation on inputs (if any)
 	   works correctly. */
 	for (u8_t i = 0; i < KEYSIZE; i++) {
-		//printk("check: c (%d) = k (%d) ^ cl (%d)\n", ciphertext_out[i], key_in[i], cleartext_in[i]);
 		zassert_equal(ciphertext_out[i], key_in[i] ^ cleartext_in[i], "Failed");
 	}
 }
@@ -68,7 +67,6 @@ void test_bt_encrypt_be(void)
 	/* Test custom mock behavior, this ensures that API's internal transformation on inputs (if any)
 	   works correctly. */
 	for (u8_t i = 0; i < KEYSIZE; i++) {
-		//printk("check: c (%d) = k (%d) ^ cl (%d)\n", ciphertext_out[i], key_in[i], cleartext_in[i]);
 		zassert_equal(ciphertext_out[i], key_in[i] ^ cleartext_in[i], "Failed");
 	}
 }
