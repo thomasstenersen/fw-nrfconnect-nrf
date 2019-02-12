@@ -152,10 +152,15 @@ static size_t unaligned_word_copy(u32_t *word_dst, void *dst, const void *src, s
 
 static int flash_op_write(void)
 {
-	if (!is_aligned_32(flash_state.addr) ||
-	    !is_aligned_32((off_t) flash_state.data) ||
-	    flash_state.len < sizeof(u32_t)) {
-
+	if (is_aligned_32(flash_state.addr) &&
+	    is_aligned_32((off_t) flash_state.data) &&
+	    flash_state.len >= sizeof(u32_t)) {
+		flash_state.prev_len = min(align_32(flash_state.len), NRF_FICR->CODEPAGESIZE);
+		return ble_controller_flash_write((u32_t) flash_state.addr,
+						  flash_state.data,
+						  bytes_to_words(flash_state.prev_len),
+						  flash_operation_complete_callback);
+	} else {
 		flash_state.prev_len = unaligned_word_copy(&flash_state.tmp_word,
 							   (void *)flash_state.addr,
 							   flash_state.data,
@@ -163,12 +168,6 @@ static int flash_op_write(void)
 		return ble_controller_flash_write((u32_t) align_32(flash_state.addr),
 						  &flash_state.tmp_word,
 						  1,
-						  flash_operation_complete_callback);
-	} else {
-		flash_state.prev_len = min(align_32(flash_state.len), NRF_FICR->CODEPAGESIZE);
-		return ble_controller_flash_write((u32_t) flash_state.addr,
-						  flash_state.data,
-						  bytes_to_words(flash_state.prev_len),
 						  flash_operation_complete_callback);
 	}
 }
