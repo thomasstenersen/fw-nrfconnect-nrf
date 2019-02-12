@@ -118,25 +118,48 @@ static void flash_operation_complete_callback(u32_t status)
 	}
 }
 
-static int flash_op_write(void)
+static size_t offset_32(const void *addr)
 {
+	return (const u32_t) addr & 0x3;
+}
+
+static size_t unaligned_word_copy(u32_t *word_dst, void *dst, const void *src, size_t len)
+{
+	/* Example: Writing one byte from src to dst via word_dst.
+	 *
+	 * |    |<----- src (len = 1)
+	 * |  |<------- dst
+	 * | 0 1 2 3 |
+	 * | address |
+	 *
+	 * max_offset             : max(1, 2) => 2
+	 * remaining_bytes_in_word: 4 - 2     => 2
+	 * bytes_to_copy          : min(1, 2) => 1
+	 */
+	size_t max_offset = max(offset_32(dst), offset_32(src));
+	size_t remaining_bytes_in_word = sizeof(u32_t) - max_offset;
+	size_t bytes_to_copy = min(len, remaining_bytes_in_word);
+
 	/* nRF52832 Product specification:
 	 *  Only full 32-bit words can be written to Flash using the
 	 *  NVMC interface. To write less than 32 bits to Flash, write
 	 *  the data as a word, and set all the bits that should remain
 	 *  unchanged in the word to '1'. */
-	flash_state.tmp_word = ~0x0;
+	*word_dst = ~0;
+	memcpy(&((u8_t *)word_dst)[offset_32(dst)], src, bytes_to_copy);
+	return bytes_to_copy;
+}
 
+static int flash_op_write(void)
+{
 	if (!is_aligned_32(flash_state.addr) ||
 	    !is_aligned_32((off_t) flash_state.data) ||
 	    flash_state.len < sizeof(u32_t)) {
-		size_t len = sizeof(u32_t) - max((u32_t) flash_state.addr & 0x3,
-						 (u32_t) flash_state.data & 0x3);
-		len = min(len, flash_state.len);
-		memcpy(&((uint8_t *) &flash_state.tmp_word)[flash_state.addr & 0x3],
-		       flash_state.data, len);
 
-		flash_state.prev_len = len;
+		flash_state.prev_len = unaligned_word_copy(&flash_state.tmp_word,
+							   (void *)flash_state.addr,
+							   flash_state.data,
+							   flash_state.len);
 		return ble_controller_flash_write((u32_t) align_32(flash_state.addr),
 						  &flash_state.tmp_word,
 						  1,
