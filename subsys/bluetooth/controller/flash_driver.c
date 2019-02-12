@@ -91,7 +91,7 @@ static inline size_t bytes_to_words(size_t bytes)
 
 static inline bool is_page_aligned(off_t addr)
 {
-	return (addr % NRF_FICR->CODEPAGESIZE) == 0;
+	return (addr & (NRF_FICR->CODEPAGESIZE - 1)) == 0;
 }
 
 static void flash_operation_complete_callback(u32_t status)
