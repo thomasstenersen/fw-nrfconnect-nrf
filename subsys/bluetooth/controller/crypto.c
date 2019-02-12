@@ -57,7 +57,8 @@ int bt_encrypt_le(const u8_t key[16], const u8_t plaintext[16],
 
 	int32_t errcode = MULTITHREADING_LOCK_ACQUIRE();
 	if (!errcode) {
-		errcode = ble_controller_ecb_block_encrypt(key_le, plaintext_le, enc_data_le);
+		errcode = ble_controller_ecb_block_encrypt(key_le, plaintext_le,
+							enc_data_le);
 		MULTITHREADING_LOCK_RELEASE();
 	}
 
@@ -78,7 +79,8 @@ int bt_encrypt_be(const u8_t key[16], const u8_t plaintext[16],
 
 	int32_t errcode = MULTITHREADING_LOCK_ACQUIRE();
 	if (!errcode) {
-		errcode = ble_controller_ecb_block_encrypt(key, plaintext, enc_data);
+		errcode = ble_controller_ecb_block_encrypt(key, plaintext,
+							enc_data);
 		MULTITHREADING_LOCK_RELEASE();
 	}
 

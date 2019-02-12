@@ -21,8 +21,7 @@ int32_t ble_controller_ecb_block_encrypt(const uint8_t key[16],
 	mock_check_expected();
 
 	/* This mock simply xors the cleartext with key and copies it to ciphertext */
-	for (uint32_t i = 0; i < 16; i++)
-	{
+	for (uint32_t i = 0; i < 16; i++) {
 		ciphertext[i] = key[i] ^ cleartext[i];
 	}
 

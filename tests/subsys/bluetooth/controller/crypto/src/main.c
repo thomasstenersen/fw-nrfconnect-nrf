@@ -23,7 +23,7 @@ void test_bt_rand(void)
 {
 	u8_t rand_num[5];
 
-	LOG_INF("bt_rand() @ 0x%08x\n", (uintptr_t) bt_rand);
+	LOG_INF("bt_rand() @ 0x%08x\n", (uintptr_t)bt_rand);
 
 	/* Test function call */
 	zassert_equal(bt_rand(rand_num, sizeof(rand_num)), 0, "Failed");
