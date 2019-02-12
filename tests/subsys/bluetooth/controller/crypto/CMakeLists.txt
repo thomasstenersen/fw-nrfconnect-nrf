@@ -17,5 +17,7 @@ set(app_sources
 target_sources(app PRIVATE ${app_sources})
 
 target_include_directories(app PRIVATE .)
+target_include_directories(app PRIVATE ../include)
 target_include_directories(app PRIVATE ${NRFXLIB_DIR}/ble_controller/include)
 target_include_directories(app PRIVATE $ENV{ZEPHYR_BASE}/include/bluetooth)
+target_include_directories(app PRIVATE $ENV{ZEPHYR_BASE}/subsys/bluetooth)
