@@ -188,8 +188,8 @@ static int flash_op_execute(void)
 			__ASSERT(0, "Unsupported operation\n");
 			err = -EINVAL;
 		}
+		MULTITHREADING_LOCK_RELEASE();
 	}
-	MULTITHREADING_LOCK_RELEASE();
 	return err;
 }
 
