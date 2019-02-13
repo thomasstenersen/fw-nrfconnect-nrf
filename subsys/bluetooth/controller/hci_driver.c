@@ -228,7 +228,7 @@ static void signal_thread(void *p1, void *p2, void *p3)
 
 	while (true) {
 		k_sem_take(&sem_signal, K_FOREVER);
-		ble_controller_process_SWI5_IRQ();
+		ble_controller_low_prio_tasks_process();
 	}
 }
 
@@ -310,7 +310,7 @@ static int ble_init(void)
 
 	err = MULTITHREADING_LOCK_ACQUIRE();
 	if (!err) {
-		err = ble_controller_init(blectlr_assertion_handler, &clock_cfg);
+		err = ble_controller_init(blectlr_assertion_handler, &clock_cfg, SWI5_IRQn);
 		MULTITHREADING_LOCK_RELEASE();
 	}
 	if (err < 0) {
