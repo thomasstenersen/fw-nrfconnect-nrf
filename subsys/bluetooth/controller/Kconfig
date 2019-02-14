@@ -61,3 +61,19 @@ config SOC_FLASH_NRF_LL_NRFXLIB
 		Enables Nordic BLE controller flash driver.
 
 endif # FLASH
+
+if ENTROPY_GENERATOR
+
+config ENTROPY_NRF_LL_NRFXLIB
+  bool "Nordic BLE controller entropy driver"
+	default y
+	depends on ENTROPY_GENERATOR
+	depends on SOC_COMPATIBLE_NRF
+	select ENTROPY_HAS_DRIVER
+	help
+	  This option enables the RNG peripheral, which is a random number
+	  generator, based on internal thermal noise, that provides a
+	  random 8-bit value to the host when read.
+
+endif # ENTROPY_GENERATOR
+
