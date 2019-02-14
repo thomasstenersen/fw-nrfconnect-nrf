@@ -51,18 +51,13 @@ config BLECTLR_THREADSAFETY_LOCK_TIMEOUT_MSEC
 endmenu
 
 if FLASH
-choice FLASH_NRF_DRIVER
-	prompt "Nordic Semiconductor flash driver"
-  bool
-
 config SOC_FLASH_NRF_LL_NRFXLIB
 	bool "Nordic BLE controller flash driver"
-	depends on BT_LL_NRFXLIB
+	default y
 	select FLASH_HAS_PAGE_LAYOUT
 	select FLASH_HAS_DRIVER_ENABLED
 	select MPU_ALLOW_FLASH_WRITE if CPU_HAS_MPU
 	help
 		Enables Nordic BLE controller flash driver.
 
-endchoice
 endif # FLASH
