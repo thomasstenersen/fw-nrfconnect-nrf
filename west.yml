@@ -29,6 +29,9 @@ manifest:
       url-base: https://github.com/ThrowTheSwitch
     - name: armmbed
       url-base: https://github.com/ARMmbed
+    - name: thomasstenersen
+      url-base: https://github.com/thomasstenersen
+
 
   # The list of external projects for the nRF Connect SDK.
   #
@@ -36,7 +39,8 @@ manifest:
     - name: zephyr
       repo-path: fw-nrfconnect-zephyr
       west-commands: scripts/west-commands.yml
-      revision: eb4e78d449a37114da70439366e9134e574d9144
+      revision: d52cc13317876988b9f3ec7c44fb0fb35afa8363
+      remote: thomasstenersen
     - name: nffs
       revision: bc62a2fa9d98ddb5d633c932ea199bc68e10f194
       path: modules/fs/nffs
