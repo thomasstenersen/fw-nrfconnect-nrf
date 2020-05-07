@@ -20,7 +20,7 @@
 #define BT_DBG_ENABLED IS_ENABLED(CONFIG_BT_DEBUG_HCI_DRIVER)
 #define LOG_MODULE_NAME bt_ctlr_hci_driver
 #include "common/log.h"
-
+#include "nrf.h"
 static K_SEM_DEFINE(sem_recv, 0, 1);
 
 static struct k_thread recv_thread_data;
@@ -135,7 +135,7 @@ static int hci_driver_send(struct net_buf *buf)
 {
 	int err;
 	u8_t type;
-
+	NRF_P0->OUTSET = 1 << 28;
 	BT_DBG("");
 
 	if (!buf->len) {
@@ -161,7 +161,7 @@ static int hci_driver_send(struct net_buf *buf)
 	if (!err) {
 		net_buf_unref(buf);
 	}
-
+	NRF_P0->OUTCLR = 1 << 28;
 	BT_DBG("Exit: %d", err);
 	return err;
 }
@@ -288,11 +288,12 @@ static void recv_thread(void *p1, void *p2, void *p3)
 	bool received_data = false;
 
 	while (true) {
+		NRF_P0->OUTSET = 1 << 30;
 		if (!received_evt && !received_data) {
 			/* Wait for a signal from the controller. */
 			k_sem_take(&sem_recv, K_FOREVER);
 		}
-
+		NRF_P0->OUTCLR = 1 << 30;
 		received_evt = fetch_and_process_hci_evt(&hci_buffer[0]);
 
 		received_data = fetch_and_process_acl_data(&hci_buffer[0]);
@@ -304,8 +305,10 @@ static void recv_thread(void *p1, void *p2, void *p3)
 
 void host_signal(void)
 {
+	NRF_P0->OUTSET = 1 << 29;
 	/* Wake up the RX event/data thread */
 	k_sem_give(&sem_recv);
+	NRF_P0->OUTCLR = 1 << 29;
 }
 
 static int hci_driver_open(void)
@@ -455,7 +458,7 @@ static int hci_driver_init(struct device *unused)
 {
 	ARG_UNUSED(unused);
 	int err = 0;
-
+	NRF_P0->DIRSET = (1 << 3 | 1 << 4 | 1 << 28 | 1 << 29 | 1 << 30);
 	bt_hci_driver_register(&drv);
 
 	err = ble_controller_init(blectlr_assertion_handler);

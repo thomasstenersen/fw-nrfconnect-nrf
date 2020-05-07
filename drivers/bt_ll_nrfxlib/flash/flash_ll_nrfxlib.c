@@ -16,6 +16,10 @@
 
 #include "ble_controller_soc.h"
 #include "multithreading_lock.h"
+#include "nrf.h"
+#define MODULE flash_ll_nrfxlib
+#include <logging/log.h>
+LOG_MODULE_REGISTER(MODULE, LOG_LEVEL_ERR);
 
 /* NOTE: The driver supports unligned writes, but some file systems (like FCB)
  * may use the driver sub-optimally as a result. Word aligned writes are faster
@@ -114,7 +118,8 @@ static void flash_operation_complete_callback(u32_t status)
 {
 	__ASSERT_NO_MSG(flash_state.op == FLASH_OP_WRITE ||
 			flash_state.op == FLASH_OP_ERASE);
-
+	NRF_P0->OUTCLR = 1 << 4;
+	LOG_ERR("Complete %u", status);
 	int err;
 
 	flash_state.addr += flash_state.prev_len;
@@ -218,8 +223,10 @@ static int flash_op_write(void)
 static int flash_op_execute(void)
 {
 	int err;
-
+	LOG_ERR("execute");
+	NRF_P0->OUTSET = 1 << 4;
 	err = MULTITHREADING_LOCK_ACQUIRE();
+	LOG_ERR("Got lock");
 	if (!err) {
 		if (flash_state.op == FLASH_OP_WRITE) {
 			err = flash_op_write();
