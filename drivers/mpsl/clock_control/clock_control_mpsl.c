@@ -417,3 +417,15 @@ static void hf_clock_started_callback(void)
 	sys_slist_init(list);
 	irq_unlock(key);
 }
+
+struct onoff_manager *z_nrf_clock_control_get_onoff(clock_control_subsys_t sys)
+{
+	/* TODO Impmlement onoff service for clock_control_mpsl */
+
+	return NULL;
+}
+
+void z_nrf_clock_control_lf_on(enum nrf_lfclk_start_mode start_mode)
+{
+	/* No-op. LFCLK is started by default by mpsl_init(). */
+}
