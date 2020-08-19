@@ -168,7 +168,7 @@ void nrf_power_clock_isr(void)
 
 static int clock_start(struct device *dev, clock_control_subsys_t subsys)
 {
-	struct mpsl_clock_control_data *mpsl_control_data = dev->driver_data;
+	struct mpsl_clock_control_data *mpsl_control_data = dev->data;
 	enum clock_control_nrf_type type = (enum clock_control_nrf_type)subsys;
 	int errcode = 0;
 	int key;
@@ -200,7 +200,7 @@ static int clock_start(struct device *dev, clock_control_subsys_t subsys)
 
 static int clock_stop(struct device *dev, clock_control_subsys_t subsys)
 {
-	struct mpsl_clock_control_data *mpsl_control_data = dev->driver_data;
+	struct mpsl_clock_control_data *mpsl_control_data = dev->data;
 	enum clock_control_nrf_type type = (enum clock_control_nrf_type)subsys;
 	int errcode = 0;
 	int key;
@@ -280,7 +280,7 @@ static enum clock_control_status clock_get_status(struct device *dev,
 static int clock_async_start(struct device *dev, clock_control_subsys_t subsys,
 			     struct clock_control_async_data *data)
 {
-	struct mpsl_clock_control_data *mpsl_control_data = dev->driver_data;
+	struct mpsl_clock_control_data *mpsl_control_data = dev->data;
 	int errcode = 0;
 	int key = irq_lock();
 	enum clock_control_status clock_status = clock_get_status(dev, subsys);
@@ -333,7 +333,7 @@ static int clock_async_start(struct device *dev, clock_control_subsys_t subsys,
 
 static int clock_control_init(struct device *dev)
 {
-	struct mpsl_clock_control_data *mpsl_control_data = dev->driver_data;
+	struct mpsl_clock_control_data *mpsl_control_data = dev->data;
 
 	/* No-op. LFCLK is initialized by mpsl_init() at PRE_KERNEL_1,
 	 * see subsys/mpsl/mpsl_init.c.
