@@ -94,7 +94,7 @@ pipeline {
                       (source ../zephyr/zephyr-env.sh && \
                       pip install --user -r ../tools/ci-tools/requirements.txt && \
                       pip install --user pylint && \
-                      ../tools/ci-tools/scripts/check_compliance.py $COMPLIANCE_ARGS --commits $COMMIT_RANGE) \
+                      ../zephyr/scripts/ci/check_compliance.py $COMPLIANCE_ARGS --commits $COMMIT_RANGE) \
                     """
                   }
                   finally {
